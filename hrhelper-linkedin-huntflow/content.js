@@ -784,14 +784,18 @@ function applyFloatingBorder(wrapper, color) {
   wrapper.style.boxShadow = `0 0 0 2px ${color} inset, 0 4px 14px -2px ${shadowColor}, ${base}`;
 }
 
-/** Определяет, что страница в тёмной теме (система или настройки LinkedIn). */
+/**
+ * Определяет, что страница в тёмной теме.
+ * При режиме «автоматически»: сначала тема сайта (LinkedIn), если не удалось — тема браузера (prefers-color-scheme).
+ */
 function isPageDarkMode() {
-  if (typeof window === "undefined" || !window.matchMedia) return false;
-  if (window.matchMedia("(prefers-color-scheme: dark)").matches) return true;
+  if (typeof window === "undefined") return false;
   const html = document.documentElement;
   const theme = (html.getAttribute("data-theme") || html.getAttribute("data-mode") || "").toLowerCase();
   if (theme === "dark" || theme === "dark-mode") return true;
+  if (theme === "light" || theme === "light-mode") return false;
   if (html.classList.contains("artdeco-dark-mode") || html.classList.contains("theme-dark") || html.classList.contains("dark")) return true;
+  if (html.classList.contains("artdeco-light-mode") || html.classList.contains("theme-light") || html.classList.contains("light")) return false;
   try {
     const bg = getComputedStyle(document.body).backgroundColor;
     const m = bg.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
@@ -799,8 +803,10 @@ function isPageDarkMode() {
       const r = parseInt(m[1], 10), g = parseInt(m[2], 10), b = parseInt(m[3], 10);
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       if (luminance < 0.4) return true;
+      if (luminance > 0.6) return false;
     }
   } catch (_) {}
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return true;
   return false;
 }
 
@@ -964,6 +970,7 @@ try {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "sync" && changes[OPTIONS_THEME_KEY]) {
       updateResolvedWidgetTheme();
+      if (typeof window._hrhelperApplyCalendarButtonTheme === "function") window._hrhelperApplyCalendarButtonTheme();
     }
   });
 } catch (_) {}
@@ -3612,26 +3619,6 @@ function initGoogleCalendar() {
       .hrhelper-communication-btn.hrhelper-cal-theme-dark.hrhelper-cal-viber .hrhelper-cal-sep { color: rgba(157,142,247,.6) !important; }
       .hrhelper-communication-btn.hrhelper-cal-theme-dark.hrhelper-cal-default { border-color: #9aa0a6 !important; color: #9aa0a6 !important; box-shadow: 0 1px 3px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.25) !important; }
       .hrhelper-communication-btn.hrhelper-cal-theme-dark.hrhelper-cal-default .hrhelper-cal-sep { color: rgba(154,160,166,.7) !important; }
-      @media (prefers-color-scheme: dark) {
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark) {
-          background: #3c4043 !important;
-          border-color: rgba(255,255,255,.2) !important;
-          color: #e8eaed !important;
-          box-shadow: 0 1px 3px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.25) !important;
-        }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark):hover { box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.2) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark) .hrhelper-cal-sep { color: rgba(255,255,255,.4) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-telegram { border-color: #5eb8f0 !important; color: #5eb8f0 !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-telegram .hrhelper-cal-sep { color: rgba(94,184,240,.6) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-linkedin { border-color: #6eb3f7 !important; color: #6eb3f7 !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-linkedin .hrhelper-cal-sep { color: rgba(110,179,247,.6) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-whatsapp { border-color: #7ee081 !important; color: #7ee081 !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-whatsapp .hrhelper-cal-sep { color: rgba(126,224,129,.6) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-viber { border-color: #9d8ef7 !important; color: #9d8ef7 !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-viber .hrhelper-cal-sep { color: rgba(157,142,247,.6) !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-default { border-color: #9aa0a6 !important; color: #9aa0a6 !important; }
-        .hrhelper-communication-btn:not(.hrhelper-cal-theme-dark).hrhelper-cal-default .hrhelper-cal-sep { color: rgba(154,160,166,.7) !important; }
-      }
     `;
     (document.head || document.documentElement).appendChild(style);
   }
@@ -3654,45 +3641,77 @@ function initGoogleCalendar() {
     return null;
   }
 
-  function isCalendarPageDark() {
+  /** Возвращает тему сайта календаря: "dark" | "light" | null. Сначала общий фон страницы (body/html), затем контейнер кнопки. */
+  function getCalendarSiteTheme() {
     const html = document.documentElement;
     const body = document.body;
-    if (html.getAttribute('data-theme') === 'dark' || html.getAttribute('data-theme') === 'dark_theme') return true;
-    if (html.classList && (html.classList.contains('dark') || html.classList.contains('theme-dark') || html.classList.contains('dark-theme'))) return true;
-    if (body.classList && (body.classList.contains('dark') || body.classList.contains('theme-dark'))) return true;
+    if (html.getAttribute('data-theme') === 'dark' || html.getAttribute('data-theme') === 'dark_theme') return 'dark';
+    if (html.getAttribute('data-theme') === 'light' || html.getAttribute('data-theme') === 'light_theme') return 'light';
+    if (html.classList && (html.classList.contains('dark') || html.classList.contains('theme-dark') || html.classList.contains('dark-theme'))) return 'dark';
+    if (html.classList && (html.classList.contains('light') || html.classList.contains('theme-light') || html.classList.contains('light-theme'))) return 'light';
+    if (body.classList && (body.classList.contains('dark') || body.classList.contains('theme-dark'))) return 'dark';
+    if (body.classList && (body.classList.contains('light') || body.classList.contains('theme-light'))) return 'light';
     try {
       const sampleLuminance = (el) => {
         if (!el) return null;
         const bg = window.getComputedStyle(el).backgroundColor;
         return parseRgbLuminance(bg);
       };
+      const bodyLum = sampleLuminance(body);
+      if (bodyLum != null) { if (bodyLum < 0.45) return 'dark'; if (bodyLum > 0.6) return 'light'; }
+      const htmlLum = sampleLuminance(html);
+      if (htmlLum != null) { if (htmlLum < 0.45) return 'dark'; if (htmlLum > 0.6) return 'light'; }
       const firstBtn = document.querySelector('.hrhelper-communication-btn');
       if (firstBtn) {
         let el = firstBtn.parentElement;
         for (let i = 0; i < 20 && el; i++) {
           const lum = sampleLuminance(el);
-          if (lum != null) return lum < 0.45;
+          if (lum != null) {
+            if (lum < 0.45) return 'dark';
+            if (lum > 0.6) return 'light';
+          }
           el = el.parentElement;
         }
       }
-      const bodyLum = sampleLuminance(body);
-      if (bodyLum != null) return bodyLum < 0.45;
-      const htmlLum = sampleLuminance(html);
-      if (htmlLum != null) return htmlLum < 0.45;
     } catch (_) {}
-    return false;
+    return null;
+  }
+
+  /** Разрешённая тема для кнопок календаря с учётом настроек: при "system" — тема сайта, иначе тема браузера. */
+  function getCalendarResolvedTheme() {
+    return new Promise((resolve) => {
+      const themeKey = (window.__HRH__ && window.__HRH__.OPTIONS_THEME_KEY) || 'hrhelper_options_theme';
+      try {
+        chrome.storage.sync.get({ [themeKey]: 'system' }, (data) => {
+          const theme = data[themeKey] || 'system';
+          if (theme === 'light') { resolve('light'); return; }
+          if (theme === 'dark') { resolve('dark'); return; }
+          const siteTheme = getCalendarSiteTheme();
+          if (siteTheme === 'dark' || siteTheme === 'light') { resolve(siteTheme); return; }
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) { resolve('dark'); return; }
+          resolve('light');
+        });
+      } catch (_) {
+        const siteTheme = getCalendarSiteTheme();
+        if (siteTheme === 'dark' || siteTheme === 'light') { resolve(siteTheme); return; }
+        resolve(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      }
+    });
   }
 
   function applyCalendarButtonTheme() {
-    const dark = isCalendarPageDark();
-    document.querySelectorAll('.hrhelper-communication-btn').forEach((btn) => {
-      if (dark) btn.classList.add('hrhelper-cal-theme-dark');
-      else btn.classList.remove('hrhelper-cal-theme-dark');
+    getCalendarResolvedTheme().then((resolved) => {
+      const dark = resolved === 'dark';
+      document.querySelectorAll('.hrhelper-communication-btn').forEach((btn) => {
+        if (dark) btn.classList.add('hrhelper-cal-theme-dark');
+        else btn.classList.remove('hrhelper-cal-theme-dark');
+      });
     });
   }
 
   function startCalendarThemeObserver() {
     if (window._hrhelperCalendarThemeObserver) return;
+    window._hrhelperApplyCalendarButtonTheme = applyCalendarButtonTheme;
     const run = () => {
       applyCalendarButtonTheme();
     };
