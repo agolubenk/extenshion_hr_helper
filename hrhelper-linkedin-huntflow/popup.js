@@ -10,15 +10,15 @@ const CONTEXT = {
 };
 
 /** Базовая часть URL (до ? и #) для сопоставления и хранения */
-function getBaseUrl(url) {
+var getBaseUrl = (window.__HRH__ && window.__HRH__.getBaseUrl) || function (url) {
   if (!url || typeof url !== 'string') return '';
   try {
-    const u = new URL(url.trim());
+    var u = new URL(url.trim());
     return u.origin + u.pathname;
   } catch (_) {
     return url.split('?')[0].split('#')[0] || '';
   }
-}
+};
 
 /** ID резюме из пути /resume/{id} — один ключ для всех доменов */
 function getResumeIdFromUrl(url) {
@@ -48,19 +48,19 @@ function normalizeHuntflowUrl(url) {
 }
 
 /** Нормализация ссылки на профиль LinkedIn */
-function normalizeLinkedInProfileUrl(url) {
+var normalizeLinkedInProfileUrl = (window.__HRH__ && window.__HRH__.normalizeLinkedInProfileUrl) || function (url) {
   if (!url || typeof url !== 'string') return null;
   try {
-    const u = new URL(url.trim());
+    var u = new URL(url.trim());
     if (!u.hostname.endsWith('linkedin.com')) return null;
-    const parts = u.pathname.split('/').filter(Boolean);
-    const idx = parts.indexOf('in');
+    var parts = u.pathname.split('/').filter(Boolean);
+    var idx = parts.indexOf('in');
     if (idx === -1 || !parts[idx + 1]) return null;
-    return `https://www.linkedin.com/in/${parts[idx + 1]}/`;
+    return 'https://www.linkedin.com/in/' + parts[idx + 1] + '/';
   } catch (_) {
     return null;
   }
-}
+};
 
 /** Ключ настроек «активных страниц» для контекста */
 function getActivePageKeyFromContext(ctx) {
@@ -72,8 +72,23 @@ function getActivePageKeyFromContext(ctx) {
   return null;
 }
 
-const ACTIVE_PAGES_KEY = 'hrhelper_active_pages';
-const DEFAULT_ACTIVE_PAGES = { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
+var ACTIVE_PAGES_KEY = (window.__HRH__ && window.__HRH__.ACTIVE_PAGES_KEY) || 'hrhelper_active_pages';
+var DEFAULT_ACTIVE_PAGES = (window.__HRH__ && window.__HRH__.DEFAULT_ACTIVE_PAGES) || { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
+var OPTIONS_THEME_KEY = (window.__HRH__ && window.__HRH__.OPTIONS_THEME_KEY) || 'hrhelper_options_theme';
+
+/** Применяет тему попапа из настроек: light | dark | system */
+function applyPopupTheme(theme) {
+  var t = (theme === 'light' || theme === 'dark') ? theme : 'system';
+  document.body.classList.remove('popup-theme-light', 'popup-theme-dark', 'popup-theme-system');
+  document.body.classList.add('popup-theme-' + t);
+}
+
+/** Загружает тему из storage и применяет к попапу */
+function loadAndApplyPopupTheme() {
+  chrome.storage.sync.get({ [OPTIONS_THEME_KEY]: 'system' }, function (data) {
+    applyPopupTheme(data[OPTIONS_THEME_KEY]);
+  });
+}
 
 /** Определяет контекст по URL вкладки */
 function getContextFromUrl(url) {
@@ -1161,9 +1176,7 @@ function createVacancyCard(vacancy, type, showCopyBtn) {
   card.className = 'ctx-vacancy-card' + (isRejected ? ' ctx-vacancy-card-rejected' : '') + (isArchived ? ' ctx-vacancy-card-archived' : '');
   card.dataset.vacancyId = vacancy.vacancy_id;
   const isSelected = linkedinState.selectedVacancyId === vacancy.vacancy_id;
-  const borderColor = isArchived ? '#dee2e6' : (type === 'active' ? '#b6d4fe' : '#f1aeb5');
-  const bgColor = isArchived ? '#e9ecef' : (type === 'active' ? '#e7f1ff' : '#f8d7da');
-  card.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;border:1px solid ' + borderColor + ';background:' + bgColor + ';';
+  card.style.cssText = 'padding:12px;margin-bottom:8px;border-radius:8px;';
   if (type === 'active' && !showCopyBtn) {
     card.classList.add('selectable');
     if (isSelected) card.classList.add('selected');
@@ -1190,7 +1203,6 @@ function createVacancyCard(vacancy, type, showCopyBtn) {
     nameEl.textContent = (vacancy.vacancy_name || '—') + (dateTimeStr ? ' (' + dateTimeStr + ')' : '');
     const statusLine = document.createElement('div');
     statusLine.className = 'ctx-rejected-status';
-    statusLine.style.cssText = 'font-size:12px;color:#495057;margin-top:2px;';
     statusLine.textContent = vacancy.status_name ? 'Статус: ' + vacancy.status_name : '';
     const reasonEl = document.createElement('div');
     reasonEl.className = 'ctx-rejected-reason';
@@ -2308,22 +2320,7 @@ async function copyMeetLevelText() {
   }
 }
 
-/** Из вставленного текста извлекает только ключ токена (как ожидает API). */
-function normalizeToken(input) {
-  if (!input || typeof input !== 'string') return '';
-  let s = input.trim();
-  if (!s) return '';
-  if (/^Token\s+/i.test(s)) s = s.replace(/^Token\s+/i, '');
-  if (/^Bearer\s+/i.test(s)) s = s.replace(/^Bearer\s+/i, '');
-  try {
-    const parsed = JSON.parse(s);
-    if (parsed && typeof parsed.data === 'object' && parsed.data && typeof parsed.data.token === 'string') {
-      return parsed.data.token.trim();
-    }
-    if (parsed && typeof parsed.token === 'string') return parsed.token.trim();
-  } catch (_) {}
-  return s;
-}
+var normalizeToken = (window.__HRH__ && window.__HRH__.normalizeToken) || function () { return ''; };
 
 /** Заполняет форму настройки в попапе значениями из storage */
 async function loadSetupForm() {
@@ -2335,7 +2332,7 @@ async function loadSetupForm() {
   const tokenLink = document.getElementById('popup-token-link');
   if (baseUrlEl) baseUrlEl.value = baseUrl;
   if (tokenEl) tokenEl.value = apiToken;
-  if (tokenLink && baseUrl) tokenLink.href = `${baseUrl}/api/v1/accounts/users/token/`;
+  if (tokenLink && baseUrl) tokenLink.href = (baseUrl.replace(/\/+$/, '') + '/accounts/integrations/');
 }
 
 /** Сохраняет настройки из формы попапа в storage */
@@ -2518,6 +2515,14 @@ document.querySelectorAll('.ctx-toolbar-btn').forEach((btn) => {
       document.execCommand(cmd, false, null);
     }
   });
+});
+
+// Тема попапа из настроек
+loadAndApplyPopupTheme();
+chrome.storage.onChanged.addListener(function (changes, areaName) {
+  if (areaName === 'sync' && changes[OPTIONS_THEME_KEY]) {
+    applyPopupTheme(changes[OPTIONS_THEME_KEY].newValue);
+  }
 });
 
 // Сначала показываем контекст по текущей вкладке, затем статус

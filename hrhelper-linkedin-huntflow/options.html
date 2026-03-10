@@ -132,6 +132,33 @@
       display: block;
       margin-top: 10px;
     }
+    .options-connection-status {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .options-connection-status.connected {
+      background: rgba(21, 128, 61, 0.12);
+      border: 1px solid rgba(21, 128, 61, 0.35);
+      color: #0f5132;
+    }
+    .options-connection-status.error {
+      background: rgba(244, 67, 54, 0.08);
+      border: 1px solid rgba(244, 67, 54, 0.25);
+      color: #842029;
+    }
+    body.options-theme-dark .options-connection-status.connected {
+      background: rgba(63, 185, 80, 0.15);
+      border-color: rgba(63, 185, 80, 0.4);
+      color: #81c784;
+    }
+    body.options-theme-dark .options-connection-status.error {
+      background: rgba(244, 67, 54, 0.15);
+      border-color: rgba(244, 67, 54, 0.35);
+      color: #e57373;
+    }
     .changelog-list {
       list-style: none;
       padding: 0;
@@ -471,13 +498,14 @@
         <input type="password" id="apiToken" placeholder="Вставьте ваш API токен" />
         <div class="hint">
           Получить токен: откройте в браузере (будучи залогиненным в HR Helper) страницу
-          <a href="https://hr.sftntx.com/accounts/integrations/" target="_blank" rel="noopener">Интеграции</a>
+          <a id="options-integrations-link" href="https://hr.sftntx.com/accounts/integrations/" target="_blank" rel="noopener">Интеграции</a>
           — скопируйте API токен и вставьте в это поле.
         </div>
       </div>
 
       <button id="save">Сохранить</button>
       <div id="status"></div>
+      <div id="options-connection-status" class="options-connection-status" aria-live="polite" style="display: none;"></div>
 
       <div class="hint" style="margin-top: 20px; color: #666;">
         Для работы расширения нужно быть залогиненным в HRHelper в этом же профиле Chrome (cookies).
@@ -653,6 +681,8 @@
     <span>Wiki</span>
   </a>
 
+  <script src="shared/constants.js"></script>
+  <script src="shared/utils/token.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

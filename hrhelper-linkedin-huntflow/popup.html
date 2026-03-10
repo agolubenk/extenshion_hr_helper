@@ -668,6 +668,8 @@
       margin-bottom: 8px;
       border-radius: 8px;
       transition: box-shadow 0.2s ease;
+      border: 1px solid #b6d4fe;
+      background: #e7f1ff;
     }
     .ctx-vacancy-card:hover {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -678,6 +680,19 @@
     .ctx-vacancy-card.selected {
       border-color: #0a66c2;
       box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.3);
+    }
+    .ctx-vacancy-card-rejected {
+      border-color: #f1aeb5;
+      background: #f8d7da;
+    }
+    .ctx-vacancy-card-archived {
+      border-color: #dee2e6;
+      background: #e9ecef;
+    }
+    .ctx-rejected-status {
+      font-size: 12px;
+      color: #495057;
+      margin-top: 2px;
     }
     .ctx-vacancy-card-row {
       display: flex;
@@ -907,6 +922,109 @@
     .btn-copy-next-week { background: linear-gradient(135deg, #0984e3, #74b9ff); }
     .btn-add-week { background: linear-gradient(135deg, #00b894, #00cec9); }
     .btn-copy-all-slots { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+
+    /* Тема попапа из настроек: light | dark | system */
+    body.popup-theme-dark {
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    body.popup-theme-dark .header { border-bottom-color: #404040; }
+    body.popup-theme-dark .header h1 { color: #e0e0e0; }
+    body.popup-theme-dark .header-settings-btn { color: #b0b0b0; }
+    body.popup-theme-dark .header-settings-btn:hover { background: rgba(110, 179, 247, 0.2); color: #6eb3f7; }
+    body.popup-theme-dark .header-action-btn { color: #6eb3f7; background: rgba(110, 179, 247, 0.15); border-color: rgba(110, 179, 247, 0.35); }
+    body.popup-theme-dark .header-action-btn:hover { background: #1976d2; color: #fff; }
+    body.popup-theme-dark .context-block { background: rgba(25, 118, 210, 0.12); border-color: rgba(25, 118, 210, 0.35); }
+    body.popup-theme-dark .context-block h2, body.popup-theme-dark .context-block .ctx-fio { color: #e0e0e0; }
+    body.popup-theme-dark .context-block h3, body.popup-theme-dark .context-block .ctx-label { color: #64b5f6; }
+    body.popup-theme-dark .context-block p, body.popup-theme-dark .context-block .ctx-desc,
+    body.popup-theme-dark .context-block .ctx-vacancy, body.popup-theme-dark .context-block .ctx-last-comment { color: #90caf9; }
+    body.popup-theme-dark .context-block .ctx-input, body.popup-theme-dark .context-block .ctx-select,
+    body.popup-theme-dark .context-block .ctx-comment-editor { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e8e8e8; }
+    body.popup-theme-dark .context-block .ctx-comment-toolbar { background: #252529; border-color: rgba(255,255,255,.12); }
+    body.popup-theme-dark .context-block .ctx-comment-wrap { border-color: rgba(255,255,255,.15); background: #2d2d31; }
+    body.popup-theme-dark .context-block .ctx-message { background: rgba(255, 193, 7, 0.2); color: #ffd54f; border-color: #ffc107; }
+    body.popup-theme-dark .status.ok { background: rgba(63, 185, 80, 0.2); color: #81c784; }
+    body.popup-theme-dark .status.warn { background: rgba(255, 193, 7, 0.2); color: #ffd54f; }
+    body.popup-theme-dark .status.err { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+    body.popup-theme-dark .hint { color: #9e9e9e; }
+    body.popup-theme-dark .popup-copy-buttons { background: #2d2d31; border-color: #404040; }
+    body.popup-theme-dark .popup-copy-buttons-title { color: #e0e0e0; }
+    body.popup-theme-dark .ctx-vacancy-card-name, body.popup-theme-dark .ctx-rejected-name { color: #f0f0f0; }
+    body.popup-theme-dark .ctx-vacancy-card-date { color: #b0b0b0; }
+    body.popup-theme-dark .ctx-vacancy-card { background: #252529; border: 1px solid #404040; }
+    body.popup-theme-dark .ctx-vacancy-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    body.popup-theme-dark .ctx-vacancy-card.selected { border-color: #64b5f6; box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.35); }
+    body.popup-theme-dark .ctx-vacancy-card-rejected { background: #3d2a2a; border-color: #c62828; }
+    body.popup-theme-dark .ctx-vacancy-card-archived { background: #2d2d31; border-color: #505050; }
+    body.popup-theme-dark .ctx-rejected-status { color: #b0b0b0; }
+    body.popup-theme-dark .ctx-vacancy-copy-btn { background: #3d3d42; border-color: rgba(255,255,255,.2); color: #64b5f6; }
+    body.popup-theme-dark .ctx-vacancy-copy-btn:hover { background: rgba(100, 181, 246, 0.2); color: #90caf9; }
+    body.popup-theme-dark .ctx-vacancy-copy-btn.copied { background: rgba(63, 185, 80, 0.25); border-color: rgba(63, 185, 80, 0.4); color: #81c784; }
+    body.popup-theme-dark .ctx-rejected-restart-btn { background: #3d3d42; border-color: rgba(244, 67, 54, 0.4); color: #e57373; }
+    body.popup-theme-dark .ctx-rejected-restart-btn:hover { background: rgba(244, 67, 54, 0.15); color: #ef9a9a; }
+    body.popup-theme-dark .ctx-rejected-reason { color: #ef9a9a; }
+    body.popup-theme-dark .context-block .ctx-toolbar-btn { background: #3d3d42; border-color: rgba(255,255,255,.2); color: #90caf9; }
+    body.popup-theme-dark .context-block .ctx-toolbar-btn:hover { background: rgba(100, 181, 246, 0.2); border-color: #64b5f6; }
+    body.popup-theme-dark #ctx-linkedin-vacancies-list h4 { color: #b0b0b0; }
+    body.popup-theme-dark #add-vacancy-panel { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+    body.popup-theme-dark #add-vacancy-panel > div { color: #64b5f6; }
+    body.popup-theme-dark .add-vacancy-item { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e0e0e0; }
+    body.popup-theme-dark .add-vacancy-item:hover { background: rgba(100, 181, 246, 0.15); }
+    body.popup-theme-dark .ctx-candidate-toggle { color: #64b5f6; }
+    body.popup-theme-dark .ctx-candidate-body, body.popup-theme-dark .context-block .ctx-candidate-label { color: #b0b0b0; }
+    body.popup-theme-dark .setup-form label { color: #e0e0e0; }
+    body.popup-theme-dark .setup-form input { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e8e8e8; }
+    @media (prefers-color-scheme: dark) {
+      body.popup-theme-system { background: #1a1a1a; color: #e0e0e0; }
+      body.popup-theme-system .header { border-bottom-color: #404040; }
+      body.popup-theme-system .header h1 { color: #e0e0e0; }
+      body.popup-theme-system .header-settings-btn { color: #b0b0b0; }
+      body.popup-theme-system .header-settings-btn:hover { background: rgba(110, 179, 247, 0.2); color: #6eb3f7; }
+      body.popup-theme-system .header-action-btn { color: #6eb3f7; background: rgba(110, 179, 247, 0.15); border-color: rgba(110, 179, 247, 0.35); }
+      body.popup-theme-system .header-action-btn:hover { background: #1976d2; color: #fff; }
+      body.popup-theme-system .context-block { background: rgba(25, 118, 210, 0.12); border-color: rgba(25, 118, 210, 0.35); }
+      body.popup-theme-system .context-block h2, body.popup-theme-system .context-block .ctx-fio { color: #e0e0e0; }
+      body.popup-theme-system .context-block h3, body.popup-theme-system .context-block .ctx-label { color: #64b5f6; }
+      body.popup-theme-system .context-block p, body.popup-theme-system .context-block .ctx-desc,
+      body.popup-theme-system .context-block .ctx-vacancy, body.popup-theme-system .context-block .ctx-last-comment { color: #90caf9; }
+      body.popup-theme-system .context-block .ctx-input, body.popup-theme-system .context-block .ctx-select,
+      body.popup-theme-system .context-block .ctx-comment-editor { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e8e8e8; }
+      body.popup-theme-system .context-block .ctx-comment-toolbar { background: #252529; border-color: rgba(255,255,255,.12); }
+      body.popup-theme-system .context-block .ctx-comment-wrap { border-color: rgba(255,255,255,.15); background: #2d2d31; }
+      body.popup-theme-system .context-block .ctx-message { background: rgba(255, 193, 7, 0.2); color: #ffd54f; border-color: #ffc107; }
+      body.popup-theme-system .status.ok { background: rgba(63, 185, 80, 0.2); color: #81c784; }
+      body.popup-theme-system .status.warn { background: rgba(255, 193, 7, 0.2); color: #ffd54f; }
+      body.popup-theme-system .status.err { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+      body.popup-theme-system .hint { color: #9e9e9e; }
+      body.popup-theme-system .popup-copy-buttons { background: #2d2d31; border-color: #404040; }
+      body.popup-theme-system .popup-copy-buttons-title { color: #e0e0e0; }
+      body.popup-theme-system .ctx-vacancy-card-name, body.popup-theme-system .ctx-rejected-name { color: #f0f0f0; }
+      body.popup-theme-system .ctx-vacancy-card-date { color: #b0b0b0; }
+      body.popup-theme-system .ctx-vacancy-card { background: #252529; border: 1px solid #404040; }
+      body.popup-theme-system .ctx-vacancy-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+      body.popup-theme-system .ctx-vacancy-card.selected { border-color: #64b5f6; box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.35); }
+      body.popup-theme-system .ctx-vacancy-card-rejected { background: #3d2a2a; border-color: #c62828; }
+      body.popup-theme-system .ctx-vacancy-card-archived { background: #2d2d31; border-color: #505050; }
+      body.popup-theme-system .ctx-rejected-status { color: #b0b0b0; }
+      body.popup-theme-system .ctx-vacancy-copy-btn { background: #3d3d42; border-color: rgba(255,255,255,.2); color: #64b5f6; }
+      body.popup-theme-system .ctx-vacancy-copy-btn:hover { background: rgba(100, 181, 246, 0.2); color: #90caf9; }
+      body.popup-theme-system .ctx-vacancy-copy-btn.copied { background: rgba(63, 185, 80, 0.25); border-color: rgba(63, 185, 80, 0.4); color: #81c784; }
+      body.popup-theme-system .ctx-rejected-restart-btn { background: #3d3d42; border-color: rgba(244, 67, 54, 0.4); color: #e57373; }
+      body.popup-theme-system .ctx-rejected-restart-btn:hover { background: rgba(244, 67, 54, 0.15); color: #ef9a9a; }
+      body.popup-theme-system .ctx-rejected-reason { color: #ef9a9a; }
+      body.popup-theme-system .context-block .ctx-toolbar-btn { background: #3d3d42; border-color: rgba(255,255,255,.2); color: #90caf9; }
+      body.popup-theme-system .context-block .ctx-toolbar-btn:hover { background: rgba(100, 181, 246, 0.2); border-color: #64b5f6; }
+      body.popup-theme-system #ctx-linkedin-vacancies-list h4 { color: #b0b0b0; }
+      body.popup-theme-system #add-vacancy-panel { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+      body.popup-theme-system #add-vacancy-panel > div { color: #64b5f6; }
+      body.popup-theme-system .add-vacancy-item { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e0e0e0; }
+      body.popup-theme-system .add-vacancy-item:hover { background: rgba(100, 181, 246, 0.15); }
+      body.popup-theme-system .ctx-candidate-toggle { color: #64b5f6; }
+      body.popup-theme-system .ctx-candidate-body, body.popup-theme-system .context-block .ctx-candidate-label { color: #b0b0b0; }
+      body.popup-theme-system .setup-form label { color: #e0e0e0; }
+      body.popup-theme-system .setup-form input { background: #2d2d31; border-color: rgba(255,255,255,.15); color: #e8e8e8; }
+    }
   </style>
 </head>
 <body>
@@ -1098,15 +1216,17 @@
       <label for="popup-apiToken">API Token (DRF)</label>
       <input type="password" id="popup-apiToken" placeholder="Вставьте ваш API токен" />
       <div class="form-hint">
-        Получить токен: откройте в браузере (будучи залогиненным в HR Helper)
-        <a id="popup-token-link" href="https://hr.sftntx.com/api/v1/accounts/users/token/" target="_blank" rel="noopener">/api/v1/accounts/users/token/</a>
-        — скопируйте значение из <code>data.token</code> (без «Token » и без кавычек). Можно вставить и весь JSON — расширение возьмёт ключ само.
+        Получить токен: откройте в браузере (будучи залогиненным в HR Helper) страницу
+        <a id="popup-token-link" href="https://hr.sftntx.com/accounts/integrations/" target="_blank" rel="noopener">Интеграции</a>
+        — скопируйте API токен и вставьте в это поле.
       </div>
     </div>
     <button type="button" id="popup-save" class="btn btn-save">Сохранить</button>
-    <p class="hint" style="margin-top: 12px;">Расширение добавляет кнопку Huntflow на профили LinkedIn и работает с календарём и Meet.</p>
-    <a href="https://hr.sftntx.com/google-oauth/chat/" target="_blank" rel="noopener" class="btn secondary" style="margin-top: 8px;">Открыть HR Helper</a>
+    <a href="https://hr.sftntx.com/" target="_blank" rel="noopener" class="btn secondary" style="margin-top: 8px;">Открыть HR Helper</a>
   </div>
+  <script src="shared/constants.js"></script>
+  <script src="shared/utils/token.js"></script>
+  <script src="shared/utils/url.js"></script>
   <script src="vacancy-utils.js"></script>
   <script src="popup.js"></script>
 </body>

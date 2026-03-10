@@ -1,19 +1,11 @@
-const DEFAULTS = {
-  baseUrl: "https://hr.sftntx.com",
-  apiToken: "",
-};
+importScripts("shared/constants.js", "shared/utils/token.js");
 
-const ACTIVE_PAGES_KEY = "hrhelper_active_pages";
-const DEFAULT_ACTIVE_PAGES = {
-  linkedin: true,
-  hh_ecosystem: true,
-  huntflow: true,
-  meet: true,
-  calendar: true,
-};
-
-const DEFAULT_ICONS = { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" };
-const UNKNOWN_PAGE_ICONS = { 16: "icons/dark-label-24.png", 32: "icons/dark-label-48.png", 48: "icons/dark-label-72.png", 128: "icons/dark-label-192.png" };
+const DEFAULTS = self.__HRH__.DEFAULTS;
+const ACTIVE_PAGES_KEY = self.__HRH__.ACTIVE_PAGES_KEY;
+const DEFAULT_ACTIVE_PAGES = self.__HRH__.DEFAULT_ACTIVE_PAGES;
+const DEFAULT_ICONS = self.__HRH__.DEFAULT_ICONS;
+const UNKNOWN_PAGE_ICONS = self.__HRH__.UNKNOWN_PAGE_ICONS;
+const normalizeToken = self.__HRH__.normalizeToken;
 
 /** Тип страницы по URL для проверки «активных страниц». */
 function getPageTypeFromUrl(url) {
@@ -56,20 +48,6 @@ async function updateExtensionIcon(tabId, url) {
 const CACHE_TTL_MS = 30_000;
 const cache = new Map();
 const inflight = new Map();
-
-function normalizeToken(input) {
-  if (!input || typeof input !== "string") return "";
-  let s = input.trim();
-  if (!s) return "";
-  if (/^Token\s+/i.test(s)) s = s.replace(/^Token\s+/i, "");
-  if (/^Bearer\s+/i.test(s)) s = s.replace(/^Bearer\s+/i, "");
-  try {
-    const parsed = JSON.parse(s);
-    if (parsed?.data?.token) return String(parsed.data.token).trim();
-    if (parsed?.token) return String(parsed.token).trim();
-  } catch (_) {}
-  return s;
-}
 
 async function getConfig() {
   try {

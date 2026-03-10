@@ -1,6 +1,4 @@
-const DEFAULTS = {
-  baseUrl: "https://hr.sftntx.com",
-};
+const DEFAULTS = (window.__HRH__ && window.__HRH__.DEFAULTS) ? window.__HRH__.DEFAULTS : { baseUrl: "https://hr.sftntx.com" };
 
 const FLOATING_UI_STATE_KEY = "hrhelper_linkedin_floating_ui_state";
 const LINKEDIN_FLOATING_HIDDEN_KEY = "hrhelper_linkedin_floating_hidden";
@@ -155,7 +153,7 @@ const STATE = {
   },
 };
 
-function normalizeLinkedInProfileUrl(url) {
+const normalizeLinkedInProfileUrl = (window.__HRH__ && window.__HRH__.normalizeLinkedInProfileUrl) || function (url) {
   try {
     const u = new URL(url);
     if (!u.hostname.endsWith("linkedin.com")) return null;
@@ -166,15 +164,15 @@ function normalizeLinkedInProfileUrl(url) {
   } catch {
     return null;
   }
-}
+};
 
-function isExtensionContextValid() {
+const isExtensionContextValid = (window.__HRH__ && window.__HRH__.isExtensionContextValid) || function () {
   try {
-    return typeof chrome !== 'undefined' && chrome.runtime?.id != null;
+    return typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id != null;
   } catch (_) {
     return false;
   }
-}
+};
 
 async function getConfig() {
   if (!isExtensionContextValid()) {
@@ -806,6 +804,33 @@ function isPageDarkMode() {
   return false;
 }
 
+/** Ключ темы в настройках и текущая разрешённая тема виджетов (light | dark) */
+const OPTIONS_THEME_KEY = (window.__HRH__ && window.__HRH__.OPTIONS_THEME_KEY) || "hrhelper_options_theme";
+let resolvedWidgetTheme = "light";
+
+/** Возвращает разрешённую тему виджетов: из настроек или system = по странице. */
+function getResolvedWidgetTheme() {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.sync.get({ [OPTIONS_THEME_KEY]: "system" }, (data) => {
+        const theme = data[OPTIONS_THEME_KEY] || "system";
+        if (theme === "light") { resolve("light"); return; }
+        if (theme === "dark") { resolve("dark"); return; }
+        resolve(isPageDarkMode() ? "dark" : "light");
+      });
+    } catch (_) {
+      resolve(isPageDarkMode() ? "dark" : "light");
+    }
+  });
+}
+
+/** Обновляет кэш разрешённой темы и применяет ко всем виджетам. */
+async function updateResolvedWidgetTheme() {
+  resolvedWidgetTheme = await getResolvedWidgetTheme();
+  document.querySelectorAll(".hrhelper-floating-widget").forEach(applyFloatingWidgetTheme);
+  document.querySelectorAll(".hrhelper-messaging-bar").forEach(applyMessagingBarTheme);
+}
+
 function injectFloatingWidgetThemeStyles() {
   if (document.getElementById("hrhelper-floating-theme")) return;
   const style = document.createElement("style");
@@ -901,13 +926,13 @@ function injectFloatingWidgetThemeStyles() {
 
 function applyFloatingWidgetTheme(wrapper) {
   if (!wrapper || !wrapper.classList) return;
-  if (isPageDarkMode()) wrapper.classList.add("hrhelper-theme-dark");
+  if (resolvedWidgetTheme === "dark") wrapper.classList.add("hrhelper-theme-dark");
   else wrapper.classList.remove("hrhelper-theme-dark");
 }
 
 function applyMessagingBarTheme(wrapper) {
   if (!wrapper || !wrapper.classList) return;
-  if (isPageDarkMode()) wrapper.classList.add("hrhelper-theme-dark");
+  if (resolvedWidgetTheme === "dark") wrapper.classList.add("hrhelper-theme-dark");
   else wrapper.classList.remove("hrhelper-theme-dark");
 }
 
@@ -916,7 +941,7 @@ let messagingBarThemeObserver = null;
 function startFloatingWidgetThemeObserver(wrapper) {
   if (floatingThemeObserver || !wrapper) return;
   floatingThemeObserver = new MutationObserver(() => {
-    if (wrapper.isConnected) applyFloatingWidgetTheme(wrapper);
+    updateResolvedWidgetTheme();
   });
   floatingThemeObserver.observe(document.documentElement, {
     attributes: true,
@@ -927,13 +952,21 @@ function startFloatingWidgetThemeObserver(wrapper) {
 function startMessagingBarThemeObserver() {
   if (messagingBarThemeObserver) return;
   messagingBarThemeObserver = new MutationObserver(() => {
-    document.querySelectorAll(".hrhelper-messaging-bar").forEach(applyMessagingBarTheme);
+    updateResolvedWidgetTheme();
   });
   messagingBarThemeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-theme", "data-mode", "class"],
   });
 }
+
+try {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "sync" && changes[OPTIONS_THEME_KEY]) {
+      updateResolvedWidgetTheme();
+    }
+  });
+} catch (_) {}
 
 function createFloatingWidget() {
   injectFloatingWidgetThemeStyles();
@@ -1638,7 +1671,7 @@ async function onAddVacancyClickFloating(e, btn) {
   }
   dropdown.innerHTML = "<div class='hrhelper-dropdown-msg' style='text-align:center;'>Загрузка...</div>";
   dropdown.style.display = "block";
-  if (isPageDarkMode()) dropdown.classList.add("hrhelper-theme-dark"); else dropdown.classList.remove("hrhelper-theme-dark");
+  if (resolvedWidgetTheme === "dark") dropdown.classList.add("hrhelper-theme-dark"); else dropdown.classList.remove("hrhelper-theme-dark");
   if (dropdown.parentNode !== document.body) {
     document.body.appendChild(dropdown);
   }
@@ -1706,15 +1739,17 @@ function insertFloatingWidget() {
     loadFloatingUIState(() => {
       const { wrapper, body, statusDropdown, addVacancyDropdown, headerRight, fioSlot, toolbarRow, floatingEditBtn } = createFloatingWidget();
       floatingWidgetData = { wrapper, body, statusDropdown, addVacancyDropdown, headerRight, fioSlot, toolbarRow, floatingEditBtn };
-      applyFloatingWidgetTheme(wrapper);
-      applyFloatingBorder(wrapper, computeFloatingBorderColorLinkedIn());
-      updateFloatingWidgetTitleIcon(wrapper);
-      updateFloatingWidgetHeader();
-      populateFloatingWidgetBody(body);
-      document.body.appendChild(wrapper);
-      makeWidgetDraggable(wrapper, "hrhelper_linkedin_floating_pos", ".hrhelper-widget-header");
-      startFloatingWidgetThemeObserver(wrapper);
-      log(" Floating widget inserted");
+      updateResolvedWidgetTheme().then(() => {
+        applyFloatingWidgetTheme(wrapper);
+        applyFloatingBorder(wrapper, computeFloatingBorderColorLinkedIn());
+        updateFloatingWidgetTitleIcon(wrapper);
+        updateFloatingWidgetHeader();
+        populateFloatingWidgetBody(body);
+        document.body.appendChild(wrapper);
+        makeWidgetDraggable(wrapper, "hrhelper_linkedin_floating_pos", ".hrhelper-widget-header");
+        startFloatingWidgetThemeObserver(wrapper);
+        log(" Floating widget inserted");
+      });
     });
   });
 }
@@ -2142,57 +2177,15 @@ function setCachedStatus(linkedinUrl, status) {
   }
 }
 
-async function apiFetch(path, init) {
-  if (!isExtensionContextValid()) {
-    return {
+const apiFetch = (window.__HRH__ && window.__HRH__.apiFetch) || (function () {
+  return function apiFetchFallback() {
+    return Promise.resolve({
       ok: false,
       status: 0,
-      json: async () => ({ success: false, message: 'Extension context invalidated. Please reload the page.' }),
-    };
-  }
-  init = init || {};
-  const method = init.method || "GET";
-  const body = init.body ? JSON.parse(init.body) : undefined;
-
-  try {
-    const result = await new Promise((resolve, reject) => {
-      try {
-        chrome.runtime.sendMessage(
-          { type: "HRHELPER_API", payload: { path, method, body } },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-              return;
-            }
-            resolve(response);
-          }
-        );
-      } catch (err) {
-        reject(err);
-      }
+      json: () => Promise.resolve({ success: false, message: 'HR Helper shared scripts not loaded.' }),
     });
-
-    return {
-      ok: !!result?.ok,
-      status: result?.status ?? 0,
-      json: async () => result?.json,
-    };
-  } catch (err) {
-    if (err.message && err.message.includes('Extension context invalidated')) {
-      return {
-        ok: false,
-        status: 0,
-        json: async () => ({ success: false, message: 'Extension context invalidated. Please reload the page.' }),
-      };
-    }
-    logError(' Error in apiFetch:', err);
-    return {
-      ok: false,
-      status: 0,
-      json: async () => ({ success: false, message: err.message || 'Unknown error' }),
-    };
-  }
-}
+  };
+})();
 
 async function checkStatus(linkedinUrl, forceRefresh = false) {
   // Проверяем кэш только если не требуется принудительное обновление
@@ -5514,8 +5507,8 @@ function initGoogleMeet() {
 log(' Content script loaded');
 
 (async function runWhenPageEnabled() {
-  const ACTIVE_PAGES_KEY = 'hrhelper_active_pages';
-  const DEFAULT_ACTIVE_PAGES = { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
+  const ACTIVE_PAGES_KEY = (window.__HRH__ && window.__HRH__.ACTIVE_PAGES_KEY) || 'hrhelper_active_pages';
+  const DEFAULT_ACTIVE_PAGES = (window.__HRH__ && window.__HRH__.DEFAULT_ACTIVE_PAGES) || { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
   function getPageType() {
     const h = location.hostname.toLowerCase();
     if (h.includes('linkedin.com')) return 'linkedin';
@@ -5533,6 +5526,8 @@ log(' Content script loaded');
       return;
     }
   }
+
+  updateResolvedWidgetTheme();
 
   if (IS_GOOGLE_CALENDAR) {
     if (document.readyState === 'loading') {

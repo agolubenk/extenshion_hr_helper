@@ -4,17 +4,20 @@
  * В правом верхнем углу каждой кнопки — кнопка копирования ссылки.
  */
 (async function () {
-  const ACTIVE_PAGES_KEY = "hrhelper_active_pages";
-  const DEFAULT_ACTIVE_PAGES = { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
+  var HRH = (typeof window !== "undefined" && window.__HRH__) || {};
+  var ACTIVE_PAGES_KEY = HRH.ACTIVE_PAGES_KEY || "hrhelper_active_pages";
+  var DEFAULT_ACTIVE_PAGES = HRH.DEFAULT_ACTIVE_PAGES || { linkedin: true, hh_ecosystem: true, huntflow: true, meet: true, calendar: true };
   try {
-    const data = await chrome.storage.sync.get({ [ACTIVE_PAGES_KEY]: DEFAULT_ACTIVE_PAGES });
-    const active = data[ACTIVE_PAGES_KEY] || DEFAULT_ACTIVE_PAGES;
+    var data = await chrome.storage.sync.get({ [ACTIVE_PAGES_KEY]: DEFAULT_ACTIVE_PAGES });
+    var active = data[ACTIVE_PAGES_KEY] || DEFAULT_ACTIVE_PAGES;
     if (!active.huntflow) return;
   } catch (_) {
     return;
   }
 
-  const DEFAULTS = { baseUrl: "https://hr.sftntx.com" };
+  var DEFAULTS = HRH.DEFAULTS || { baseUrl: "https://hr.sftntx.com" };
+  const OPTIONS_THEME_KEY = HRH.OPTIONS_THEME_KEY || "hrhelper_options_theme";
+  const DEFAULT_THEME = HRH.DEFAULT_THEME || "system";
   const ATTR = "data-hrhelper-huntflow-buttons";
   const ATTR_FLOATING = "data-hrhelper-huntflow-floating";
   const ATTR_PHONE = "data-hrhelper-phone-copy";
@@ -94,22 +97,22 @@
     return !!extractApplicantId(url);
   }
 
-  async function apiFetch(path, init = {}) {
+  var apiFetch = HRH.apiFetch || (async function (path, init) {
     try {
-      const result = await new Promise((resolve, reject) => {
+      var result = await new Promise(function (resolve, reject) {
         chrome.runtime.sendMessage(
-          { type: "HRHELPER_API", payload: { path, method: init.method || "GET", body: init.body } },
-          (r) => {
+          { type: "HRHELPER_API", payload: { path: path, method: (init && init.method) || "GET", body: init && init.body } },
+          function (r) {
             if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
             else resolve(r);
           }
         );
       });
-      return { ok: !!result?.ok, status: result?.status ?? 0, json: async () => result?.json };
+      return { ok: !!result && !!result.ok, status: (result && result.status) || 0, json: function () { return Promise.resolve(result && result.json); } };
     } catch (_) {
-      return { ok: false, status: 0, json: async () => null };
+      return { ok: false, status: 0, json: function () { return Promise.resolve(null); } };
     }
-  }
+  });
 
   async function fetchCandidateLinks(huntflowUrl) {
     const res = await apiFetch(
@@ -445,52 +448,50 @@
     if (fullFeatures) {
       const copyLinkBtn = document.createElement("button");
       copyLinkBtn.type = "button";
+      copyLinkBtn.className = "hrhelper-hf-social-copy-btn";
       copyLinkBtn.title = "Копировать ссылку";
       copyLinkBtn.style.cssText =
-        "position:absolute;top:2px;right:2px;width:18px;height:18px;border:none;border-radius:4px;background:rgba(255,255,255,.9);color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0.9;transition:opacity .15s;";
+        "position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:opacity .15s;";
       copyLinkBtn.innerHTML =
         '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
       copyLinkBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         copyToClipboard(link.url).then(() => {
-          copyLinkBtn.style.background = "#d4edda";
-          copyLinkBtn.style.color = "#155724";
+          copyLinkBtn.classList.add("hrhelper-hf-copy-btn-copied");
           copyLinkBtn.title = "Скопировано";
           setTimeout(() => {
-            copyLinkBtn.style.background = "rgba(255,255,255,.9)";
-            copyLinkBtn.style.color = "#333";
+            copyLinkBtn.classList.remove("hrhelper-hf-copy-btn-copied");
             copyLinkBtn.title = "Копировать ссылку";
           }, 800);
         });
       });
       copyLinkBtn.addEventListener("mouseenter", () => { copyLinkBtn.style.opacity = "1"; });
-      copyLinkBtn.addEventListener("mouseleave", () => { copyLinkBtn.style.opacity = "0.9"; });
+      copyLinkBtn.addEventListener("mouseleave", () => { copyLinkBtn.style.opacity = ""; });
       btn.appendChild(copyLinkBtn);
 
       if (username) {
         const copyUserBtn = document.createElement("button");
         copyUserBtn.type = "button";
+        copyUserBtn.className = "hrhelper-hf-social-copy-btn";
         copyUserBtn.title = "Копировать никнейм";
         copyUserBtn.style.cssText =
-          "position:absolute;top:2px;left:2px;width:18px;height:18px;border:none;border-radius:4px;background:rgba(255,255,255,.9);color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0.9;transition:opacity .15s;";
+          "position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:opacity .15s;";
         copyUserBtn.innerHTML = USER_ICON_SVG;
         copyUserBtn.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           copyToClipboard(username).then(() => {
-            copyUserBtn.style.background = "#d4edda";
-            copyUserBtn.style.color = "#155724";
+            copyUserBtn.classList.add("hrhelper-hf-copy-btn-copied");
             copyUserBtn.title = "Скопировано";
             setTimeout(() => {
-              copyUserBtn.style.background = "rgba(255,255,255,.9)";
-              copyUserBtn.style.color = "#333";
+              copyUserBtn.classList.remove("hrhelper-hf-copy-btn-copied");
               copyUserBtn.title = "Копировать никнейм";
             }, 800);
           });
         });
         copyUserBtn.addEventListener("mouseenter", () => { copyUserBtn.style.opacity = "1"; });
-        copyUserBtn.addEventListener("mouseleave", () => { copyUserBtn.style.opacity = "0.9"; });
+        copyUserBtn.addEventListener("mouseleave", () => { copyUserBtn.style.opacity = ""; });
         btn.appendChild(copyUserBtn);
       }
     }
@@ -574,6 +575,60 @@
   const HUNTFLOW_FLOATING_UI_STATE_KEY = "hrhelper_huntflow_floating_ui_state";
   const DEFAULT_HUNTFLOW_FLOATING_UI_STATE = { widgetCollapsed: false };
   let huntflowFloatingUIState = { ...DEFAULT_HUNTFLOW_FLOATING_UI_STATE };
+
+  function getResolvedHuntflowTheme() {
+    return new Promise(function (resolve) {
+      chrome.storage.sync.get({ [OPTIONS_THEME_KEY]: DEFAULT_THEME }, function (data) {
+        var t = (data[OPTIONS_THEME_KEY] || DEFAULT_THEME).toLowerCase();
+        if (t === "light" || t === "dark") return resolve(t);
+        var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        resolve(dark ? "dark" : "light");
+      });
+    });
+  }
+
+  function applyHuntflowFloatingTheme(wrapper) {
+    if (!wrapper || !wrapper.classList) return;
+    getResolvedHuntflowTheme().then(function (theme) {
+      if (theme === "dark") wrapper.classList.add("hrhelper-theme-dark");
+      else wrapper.classList.remove("hrhelper-theme-dark");
+    });
+  }
+
+  function injectHuntflowFloatingThemeStyles() {
+    if (document.getElementById("hrhelper-huntflow-floating-theme")) return;
+    var style = document.createElement("style");
+    style.id = "hrhelper-huntflow-floating-theme";
+    style.textContent = `
+      .hrhelper-huntflow-floating-widget { background: var(--hrhelper-hf-bg) !important; color: var(--hrhelper-hf-text) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-header { border-bottom-color: var(--hrhelper-hf-border) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-title { color: var(--hrhelper-hf-accent) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-body,
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-body * { color: var(--hrhelper-hf-text) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-section-title { color: var(--hrhelper-hf-text); border-top-color: var(--hrhelper-hf-border); }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-vacancy-card { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--hrhelper-hf-card-border); background: var(--hrhelper-hf-card-bg); display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-vacancy-line1 { font-size: 12px; color: var(--hrhelper-hf-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-vacancy-line2 { font-size: 11px; color: var(--hrhelper-hf-muted); }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-copy-btn { border: 1px solid var(--hrhelper-hf-border) !important; background: var(--hrhelper-hf-input-bg) !important; color: var(--hrhelper-hf-text) !important; transition: background .15s, border-color .15s, color .15s; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-copy-btn:hover { background: var(--hrhelper-hf-btn-bg) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-copy-btn.hrhelper-hf-copy-btn-copied { background: var(--hrhelper-hf-success-bg) !important; border-color: var(--hrhelper-hf-success-border) !important; color: var(--hrhelper-hf-success) !important; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-fio-text { color: var(--hrhelper-hf-text); }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-row-text { color: var(--hrhelper-hf-muted); }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-social-copy-btn { background: var(--hrhelper-hf-input-bg) !important; color: var(--hrhelper-hf-text) !important; border: 1px solid var(--hrhelper-hf-border); opacity: 0.95; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-social-copy-btn:hover { opacity: 1; }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-social-copy-btn.hrhelper-hf-copy-btn-copied { background: var(--hrhelper-hf-success-bg) !important; color: var(--hrhelper-hf-success) !important; border-color: var(--hrhelper-hf-success-border); }
+      .hrhelper-huntflow-floating-widget button[style*="border-radius:4px"] { background: var(--hrhelper-hf-btn-bg) !important; color: var(--hrhelper-hf-muted) !important; border-color: var(--hrhelper-hf-border) !important; }
+      .hrhelper-huntflow-floating-widget { --hrhelper-hf-bg: rgba(255,255,255,.98); --hrhelper-hf-text: #212529; --hrhelper-hf-muted: #6c757d; --hrhelper-hf-border: rgba(0,0,0,.08); --hrhelper-hf-accent: #0a66c2; --hrhelper-hf-btn-bg: rgba(0,0,0,.05); --hrhelper-hf-input-bg: #fff; --hrhelper-hf-success: #0f5132; --hrhelper-hf-success-bg: #d1e7dd; --hrhelper-hf-success-border: #a3cfbb; --hrhelper-hf-card-bg: #e7f1ff; --hrhelper-hf-card-border: #b6d4fe; --hrhelper-hf-card-rejected-bg: #f8d7da; --hrhelper-hf-card-rejected-border: #f1aeb5; --hrhelper-hf-card-archived-bg: #e9ecef; --hrhelper-hf-card-archived-border: #dee2e6; }
+      .hrhelper-huntflow-floating-widget.hrhelper-theme-dark {
+        --hrhelper-hf-bg: #161b22; --hrhelper-hf-text: #e6edf3; --hrhelper-hf-muted: #8b949e; --hrhelper-hf-border: rgba(255,255,255,.12); --hrhelper-hf-accent: #58a6ff; --hrhelper-hf-btn-bg: rgba(255,255,255,.08); --hrhelper-hf-input-bg: #0d1117;
+        --hrhelper-hf-success: #3fb950; --hrhelper-hf-success-bg: rgba(63,185,80,.2); --hrhelper-hf-success-border: rgba(63,185,80,.4);
+        --hrhelper-hf-card-bg: rgba(88,166,255,.08); --hrhelper-hf-card-border: rgba(88,166,255,.35); --hrhelper-hf-card-rejected-bg: rgba(248,81,73,.15); --hrhelper-hf-card-rejected-border: rgba(248,81,73,.4); --hrhelper-hf-card-archived-bg: #21262d; --hrhelper-hf-card-archived-border: rgba(255,255,255,.12);
+      }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-vacancy-card-rejected { border-color: var(--hrhelper-hf-card-rejected-border); background: var(--hrhelper-hf-card-rejected-bg); }
+      .hrhelper-huntflow-floating-widget .hrhelper-hf-vacancy-card-archived { border-color: var(--hrhelper-hf-card-archived-border); background: var(--hrhelper-hf-card-archived-bg); }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
 
   function loadHuntflowFloatingUIState() {
     return new Promise((resolve) => {
@@ -665,8 +720,10 @@
   }
 
   function createHuntflowFloatingWidget() {
+    injectHuntflowFloatingThemeStyles();
     const wrapper = document.createElement("div");
     wrapper.setAttribute(ATTR_FLOATING, "1");
+    wrapper.className = "hrhelper-huntflow-floating-widget";
     wrapper.style.cssText = `
       position: fixed;
       top: 60px;
@@ -674,7 +731,6 @@
       z-index: 99999;
       width: 320px;
       max-height: calc(100vh - 168px);
-      background: rgba(255, 255, 255, 0.98);
       border-radius: 12px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
       padding: 16px;
@@ -683,11 +739,14 @@
       flex-direction: column;
       overflow: hidden;
     `;
+    applyHuntflowFloatingTheme(wrapper);
 
     const header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08);flex-shrink:0;";
+    header.className = "hrhelper-hf-header";
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--hrhelper-hf-border,rgba(0,0,0,.08));flex-shrink:0;";
     const title = document.createElement("div");
-    title.style.cssText = "font-size:14px;font-weight:600;color:#0a66c2;display:flex;align-items:center;gap:6px;";
+    title.className = "hrhelper-hf-title";
+    title.style.cssText = "font-size:14px;font-weight:600;color:var(--hrhelper-hf-accent,#0a66c2);display:flex;align-items:center;gap:6px;";
     const titleIcon = document.createElement("img");
     titleIcon.src = chrome.runtime.getURL("icons/icon-32.png");
     titleIcon.alt = "";
@@ -713,7 +772,7 @@
     wrapper.appendChild(header);
 
     const body = document.createElement("div");
-    body.className = "hrhelper-huntflow-widget-body";
+    body.className = "hrhelper-huntflow-widget-body hrhelper-hf-body";
     body.style.cssText = "display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow-y:auto;";
     wrapper.appendChild(body);
 
@@ -727,6 +786,12 @@
       saveHuntflowFloatingUIState({ widgetCollapsed: !next });
     });
 
+    try {
+      chrome.storage.onChanged.addListener(function (changes, areaName) {
+        if (areaName === "sync" && changes[OPTIONS_THEME_KEY]) applyHuntflowFloatingTheme(wrapper);
+      });
+    } catch (_) {}
+
     return { wrapper, body };
   }
 
@@ -735,23 +800,23 @@
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:nowrap;";
     const text = document.createElement("span");
-    text.style.cssText = "font-size:12px;color:#495057;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;";
+    text.className = "hrhelper-hf-row-text";
+    text.style.cssText = "font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;";
     text.textContent = value;
     text.title = value;
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
+    copyBtn.className = "hrhelper-hf-copy-btn";
     copyBtn.title = title || "Копировать";
-    copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;color:#495057;cursor:pointer;flex-shrink:0;";
+    copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:6px;cursor:pointer;flex-shrink:0;";
     copyBtn.innerHTML = COPY_ICON_SVG;
     copyBtn.addEventListener("click", (e) => {
       e.preventDefault();
       copyToClipboard(value).then(() => {
-        copyBtn.style.background = "#d4edda";
-        copyBtn.style.borderColor = "#c3e6cb";
+        copyBtn.classList.add("hrhelper-hf-copy-btn-copied");
         copyBtn.title = "Скопировано";
         setTimeout(() => {
-          copyBtn.style.background = "#fff";
-          copyBtn.style.borderColor = "rgba(0,0,0,.15)";
+          copyBtn.classList.remove("hrhelper-hf-copy-btn-copied");
           copyBtn.title = title || "Копировать";
         }, 800);
       });
@@ -766,23 +831,23 @@
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:nowrap;";
     const text = document.createElement("span");
-    text.style.cssText = "font-size:16px;font-weight:600;color:#212529;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;";
+    text.className = "hrhelper-hf-fio-text";
+    text.style.cssText = "font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;";
     text.textContent = fio;
     text.title = fio;
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
+    copyBtn.className = "hrhelper-hf-copy-btn";
     copyBtn.title = copyTitle || "Копировать ФИО";
-    copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;color:#495057;cursor:pointer;flex-shrink:0;";
+    copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:6px;cursor:pointer;flex-shrink:0;";
     copyBtn.innerHTML = COPY_ICON_SVG;
     copyBtn.addEventListener("click", (e) => {
       e.preventDefault();
       copyToClipboard(fio).then(() => {
-        copyBtn.style.background = "#d4edda";
-        copyBtn.style.borderColor = "#c3e6cb";
+        copyBtn.classList.add("hrhelper-hf-copy-btn-copied");
         copyBtn.title = "Скопировано";
         setTimeout(() => {
-          copyBtn.style.background = "#fff";
-          copyBtn.style.borderColor = "rgba(0,0,0,.15)";
+          copyBtn.classList.remove("hrhelper-hf-copy-btn-copied");
           copyBtn.title = copyTitle || "Копировать ФИО";
         }, 800);
       });
@@ -824,7 +889,8 @@
   function appendVacanciesSection(body, huntflowUrl) {
     if (!body || !huntflowUrl) return Promise.resolve();
     const sectionTitle = document.createElement("div");
-    sectionTitle.style.cssText = "font-size:12px;font-weight:600;color:#212529;margin-top:12px;margin-bottom:6px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08);";
+    sectionTitle.className = "hrhelper-hf-section-title";
+    sectionTitle.style.cssText = "font-size:12px;font-weight:600;margin-top:12px;margin-bottom:6px;padding-top:10px;border-top:1px solid var(--hrhelper-hf-border,rgba(0,0,0,.08));";
     sectionTitle.textContent = "Вакансии";
     body.appendChild(sectionTitle);
 
@@ -835,7 +901,7 @@
     return fetchStatusMultiByHuntflowUrl(huntflowUrl).then(({ items }) => {
       if (!items || items.length === 0) {
         const empty = document.createElement("div");
-        empty.style.cssText = "font-size:11px;color:#6c757d;";
+        empty.style.cssText = "font-size:11px;color:var(--hrhelper-hf-muted,#6c757d);";
         empty.textContent = "Нет данных о вакансиях";
         container.appendChild(empty);
         return;
@@ -843,14 +909,12 @@
       items.forEach((v) => {
         const isRejected = v.status_type === "rejected";
         const isArchived = v.is_archived;
-        const borderColor = isArchived ? "#dee2e6" : (isRejected ? "#f1aeb5" : "#b6d4fe");
-        const bgColor = isArchived ? "#e9ecef" : (isRejected ? "#f8d7da" : "#e7f1ff");
         const card = document.createElement("div");
-        card.style.cssText = "padding:8px 10px;border-radius:8px;border:1px solid " + borderColor + ";background:" + bgColor + ";display:flex;align-items:flex-start;gap:8px;flex-wrap:nowrap;";
+        card.className = "hrhelper-hf-vacancy-card" + (isRejected ? " hrhelper-hf-vacancy-card-rejected" : "") + (isArchived ? " hrhelper-hf-vacancy-card-archived" : "");
         const labelWrap = document.createElement("div");
         labelWrap.style.cssText = "flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;";
         const line1 = document.createElement("div");
-        line1.style.cssText = "font-size:12px;color:#212529;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        line1.className = "hrhelper-hf-vacancy-line1";
         let mainText = (v.vacancy_name || "—") + (v.status_name ? " · " + v.status_name : "");
         if (isRejected && (v.rejection_reason_name || "").trim()) {
           mainText += " · Причина: " + (v.rejection_reason_name || "").trim();
@@ -861,14 +925,15 @@
         const dateStr = formatLastChangeAt(v.last_change_at);
         if (dateStr) {
           const line2 = document.createElement("div");
-          line2.style.cssText = "font-size:11px;color:#6c757d;";
+          line2.className = "hrhelper-hf-vacancy-line2";
           line2.textContent = "Дата/время: " + dateStr;
           labelWrap.appendChild(line2);
         }
         const copyBtn = document.createElement("button");
         copyBtn.type = "button";
+        copyBtn.className = "hrhelper-hf-copy-btn";
         copyBtn.title = "Копировать ссылку на вакансию";
-        copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:1px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;color:#495057;cursor:pointer;flex-shrink:0;";
+        copyBtn.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:6px;cursor:pointer;flex-shrink:0;";
         copyBtn.innerHTML = COPY_LINK_ICON_SVG;
         const url = (v.appurl || "").trim();
         copyBtn.disabled = !url;
@@ -876,12 +941,10 @@
           copyBtn.addEventListener("click", (e) => {
             e.preventDefault();
             copyToClipboard(url).then(() => {
-              copyBtn.style.background = "#d4edda";
-              copyBtn.style.borderColor = "#c3e6cb";
+              copyBtn.classList.add("hrhelper-hf-copy-btn-copied");
               copyBtn.title = "Скопировано";
               setTimeout(() => {
-                copyBtn.style.background = "#fff";
-                copyBtn.style.borderColor = "rgba(0,0,0,.15)";
+                copyBtn.classList.remove("hrhelper-hf-copy-btn-copied");
                 copyBtn.title = "Копировать ссылку на вакансию";
               }, 800);
             });
@@ -937,13 +1000,18 @@
     let body;
     if (!widgetEl) {
       await loadHuntflowFloatingUIState();
+      var resolvedTheme = await getResolvedHuntflowTheme();
       const created = createHuntflowFloatingWidget();
       widgetEl = created.wrapper;
       body = created.body;
+      if (resolvedTheme === "dark") widgetEl.classList.add("hrhelper-theme-dark");
+      else widgetEl.classList.remove("hrhelper-theme-dark");
       document.body.appendChild(widgetEl);
+      applyHuntflowFloatingTheme(widgetEl);
       makeHuntflowWidgetDraggable(widgetEl);
     } else {
       body = widgetEl.querySelector(".hrhelper-huntflow-widget-body");
+      applyHuntflowFloatingTheme(widgetEl);
     }
     if (!body) {
       injectButtonsLock = false;

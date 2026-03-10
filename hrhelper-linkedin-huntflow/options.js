@@ -1,12 +1,6 @@
-const OPTIONS_THEME_KEY = "hrhelper_options_theme";
-const ACTIVE_PAGES_KEY = "hrhelper_active_pages";
-const DEFAULT_ACTIVE_PAGES = {
-  linkedin: true,
-  hh_ecosystem: true,
-  huntflow: true,
-  meet: true,
-  calendar: true,
-};
+const OPTIONS_THEME_KEY = window.__HRH__.OPTIONS_THEME_KEY || "hrhelper_options_theme";
+const ACTIVE_PAGES_KEY = window.__HRH__.ACTIVE_PAGES_KEY;
+const DEFAULT_ACTIVE_PAGES = window.__HRH__.DEFAULT_ACTIVE_PAGES;
 
 async function loadOptions() {
   const { baseUrl, apiToken, [OPTIONS_THEME_KEY]: theme, [ACTIVE_PAGES_KEY]: activePages } = await chrome.storage.sync.get({
@@ -17,6 +11,8 @@ async function loadOptions() {
   });
   document.getElementById("baseUrl").value = baseUrl;
   document.getElementById("apiToken").value = apiToken;
+  var integrationsLink = document.getElementById("options-integrations-link");
+  if (integrationsLink) integrationsLink.href = (baseUrl.replace(/\/+$/, "") || "https://hr.sftntx.com") + "/accounts/integrations/";
   const themeValue = theme === "light" || theme === "dark" ? theme : "system";
   const radio = document.querySelector(`input[name="optionsTheme"][value="${themeValue}"]`);
   if (radio) radio.checked = true;
@@ -29,23 +25,64 @@ async function loadOptions() {
     btn.classList.toggle("options-page-off", !on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
   });
+  updateConnectionStatus(baseUrl, apiToken);
 }
 
-/** Из вставленного текста извлекает только ключ токена для сохранения. */
-function normalizeToken(input) {
-  if (!input || typeof input !== "string") return "";
-  let s = input.trim();
-  if (!s) return "";
-  if (/^Token\s+/i.test(s)) s = s.replace(/^Token\s+/i, "");
-  if (/^Bearer\s+/i.test(s)) s = s.replace(/^Bearer\s+/i, "");
+/** Проверяет подключение по токену и отображает статус на странице настроек */
+async function updateConnectionStatus(baseUrl, apiToken) {
+  const el = document.getElementById("options-connection-status");
+  if (!el) return;
+  const url = (baseUrl || "").trim().replace(/\/+$/, "") || "https://hr.sftntx.com";
+  const token = normalizeToken(apiToken || "");
+
+  if (!token) {
+    el.style.display = "none";
+    el.textContent = "";
+    el.className = "options-connection-status";
+    return;
+  }
+
+  el.style.display = "block";
+  el.textContent = "Проверка подключения…";
+  el.className = "options-connection-status";
+
   try {
-    const parsed = JSON.parse(s);
-    if (parsed && typeof parsed.data === "object" && parsed.data && typeof parsed.data.token === "string")
-      return parsed.data.token.trim();
-    if (parsed && typeof parsed.token === "string") return parsed.token.trim();
-  } catch (_) {}
-  return s;
+    const res = await fetch(`${url}/api/v1/accounts/users/profile_dashboard/`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      const data = json.data || json;
+      const user = data.user || data;
+      const name =
+        user.email ||
+        user.username ||
+        (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}`.trim() : "") ||
+        user.username ||
+        "";
+      el.className = "options-connection-status connected";
+      el.textContent = name ? `Подключение выполнено. Выполнен вход как ${name}.` : "Подключение выполнено.";
+    } else {
+      el.className = "options-connection-status error";
+      if (res.status === 401) {
+        el.textContent = "Подключение не выполнено. Токен недействителен или истёк.";
+      } else if (res.status === 403) {
+        el.textContent = "Подключение не выполнено. Доступ запрещён.";
+      } else {
+        el.textContent = `Подключение не выполнено. Ошибка ${res.status}. Проверьте Base URL и токен.`;
+      }
+    }
+  } catch (e) {
+    el.className = "options-connection-status error";
+    el.textContent = "Подключение не выполнено. Проверьте сеть и Base URL.";
+  }
 }
+
+const normalizeToken = window.__HRH__.normalizeToken;
 
 async function saveOptions() {
   const baseUrl = (document.getElementById("baseUrl").value || "")
@@ -78,6 +115,7 @@ async function saveOptions() {
   status.textContent = "Сохранено.";
   status.className = "hint ok";
   setTimeout(() => (status.textContent = ""), 1500);
+  updateConnectionStatus(baseUrl, apiToken);
 }
 
 function applyTheme(theme) {
