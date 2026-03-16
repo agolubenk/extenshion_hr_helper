@@ -1170,5 +1170,121 @@
     }
   }
 
+  /**
+   * Модальное окно выбора вакансии для добавления кандидата
+   * @param {Object} candidateData — данные кандидата (candidate_id, name и пр.)
+   */
+  function showVacancySelectionModal(candidateData) {
+    // Убираем предыдущий модал если есть
+    var prev = document.querySelector('.hrhelper-vacancy-modal-overlay');
+    if (prev) prev.remove();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'hrhelper-vacancy-modal-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;';
+
+    var modal = document.createElement('div');
+    modal.className = 'hrhelper-vacancy-modal';
+    modal.style.cssText = 'background:var(--hrhelper-hf-bg,#fff);border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+
+    var headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;';
+    var titleEl = document.createElement('h3');
+    titleEl.style.cssText = 'margin:0;font-size:16px;font-weight:600;color:var(--hrhelper-hf-text,#333);';
+    titleEl.textContent = 'Выберите вакансию';
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = '\u2715';
+    closeBtn.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;color:var(--hrhelper-hf-muted,#666);padding:4px 8px;';
+    closeBtn.addEventListener('click', function () { overlay.remove(); });
+    headerDiv.appendChild(titleEl);
+    headerDiv.appendChild(closeBtn);
+    modal.appendChild(headerDiv);
+
+    var listContainer = document.createElement('div');
+    listContainer.style.cssText = 'flex:1;overflow-y:auto;';
+    var loadingEl = document.createElement('div');
+    loadingEl.style.cssText = 'text-align:center;padding:20px;color:var(--hrhelper-hf-muted,#666);font-size:13px;';
+    loadingEl.textContent = 'Загрузка вакансий...';
+    listContainer.appendChild(loadingEl);
+    modal.appendChild(listContainer);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Закрытие по клику на оверлей
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    // Загрузка вакансий
+    apiFetch('/api/v1/huntflow/vacancies/')
+      .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+      .then(function (result) {
+        listContainer.innerHTML = '';
+        if (!result.ok || !result.data) {
+          listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--hrhelper-hf-muted,#666);font-size:13px;">Не удалось загрузить вакансии</div>';
+          return;
+        }
+        var vacancies = result.data.vacancies || result.data.results || result.data || [];
+        if (!Array.isArray(vacancies) || vacancies.length === 0) {
+          listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--hrhelper-hf-muted,#666);font-size:13px;">Нет доступных вакансий</div>';
+          return;
+        }
+        vacancies.forEach(function (v) {
+          var item = document.createElement('div');
+          item.style.cssText = 'padding:10px 12px;margin-bottom:6px;border-radius:8px;cursor:pointer;border:1px solid var(--hrhelper-hf-border,#e0e0e0);background:var(--hrhelper-hf-card-bg,#fafafa);transition:background .15s;';
+          item.addEventListener('mouseenter', function () { item.style.background = 'var(--hrhelper-hf-btn-bg,#f0f0f0)'; });
+          item.addEventListener('mouseleave', function () { item.style.background = 'var(--hrhelper-hf-card-bg,#fafafa)'; });
+
+          var posEl = document.createElement('div');
+          posEl.style.cssText = 'font-size:13px;font-weight:600;color:var(--hrhelper-hf-text,#333);';
+          posEl.textContent = v.position || v.vacancy_name || v.name || '—';
+          item.appendChild(posEl);
+
+          if (v.company || v.company_name) {
+            var compEl = document.createElement('div');
+            compEl.style.cssText = 'font-size:11px;color:var(--hrhelper-hf-muted,#999);margin-top:2px;';
+            compEl.textContent = v.company || v.company_name;
+            item.appendChild(compEl);
+          }
+
+          item.addEventListener('click', function () {
+            var HuntflowAPI = g.__HRH__.HuntflowAPI;
+            if (!HuntflowAPI || !candidateData || !candidateData.candidate_id) {
+              overlay.remove();
+              return;
+            }
+            item.style.opacity = '0.6';
+            item.style.pointerEvents = 'none';
+            HuntflowAPI.addToVacancy(candidateData.candidate_id, v.id || v.vacancy_id, null)
+              .then(function (res) { return res.json(); })
+              .then(function () {
+                item.style.background = 'var(--hrhelper-hf-success-bg,#d1e7dd)';
+                item.style.borderColor = '#198754';
+                item.style.opacity = '1';
+                setTimeout(function () { overlay.remove(); }, 800);
+              })
+              .catch(function (err) {
+                item.style.opacity = '1';
+                item.style.pointerEvents = 'auto';
+                var ErrorHandler = g.__HRH__.ErrorHandler;
+                if (ErrorHandler) ErrorHandler.handle(err, 'huntflow-add-to-vacancy');
+              });
+          });
+
+          listContainer.appendChild(item);
+        });
+      })
+      .catch(function (err) {
+        listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--hrhelper-hf-muted,#666);font-size:13px;">Ошибка загрузки вакансий</div>';
+        var ErrorHandler = g.__HRH__.ErrorHandler;
+        if (ErrorHandler) ErrorHandler.handle(err, 'huntflow-fetch-vacancies');
+      });
+  }
+
+  // Экспорт для внешнего использования
+  g.__HRH__.showVacancySelectionModal = showVacancySelectionModal;
+
   init();
 })();
