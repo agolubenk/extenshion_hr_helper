@@ -489,3 +489,187 @@ body.options-theme-dark .wiki-pill-sep { color: rgba(255,255,255,.45); }
   body.options-theme-system .wiki-pill:hover { color: #e8eaed; }
   body.options-theme-system .wiki-pill-sep { color: rgba(255,255,255,.45); }
 }
+
+/* ────────────────────────────────────────────────────────────
+ *  Huntflow Settings Section
+ * ──────────────────────────────────────────────────────────── */
+
+.huntflow-settings-section .options-extra-title {
+  color: #6b46c1;
+  border-bottom-color: rgba(107, 70, 193, 0.2);
+}
+.huntflow-auth-status {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.huntflow-auth-status.connected {
+  background: rgba(21, 128, 61, 0.12);
+  border: 1px solid rgba(21, 128, 61, 0.35);
+  color: #0f5132;
+}
+.huntflow-auth-status.error {
+  background: rgba(244, 67, 54, 0.08);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+  color: #842029;
+}
+.huntflow-auth-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.huntflow-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, opacity 0.2s;
+}
+.huntflow-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.huntflow-btn-connect {
+  background: linear-gradient(135deg, #6b46c1, #805ad5);
+  color: #fff;
+}
+.huntflow-btn-connect:hover:not(:disabled) {
+  background: linear-gradient(135deg, #553c9a, #6b46c1);
+}
+.huntflow-btn-disconnect {
+  background: #e53e3e;
+  color: #fff;
+}
+.huntflow-btn-disconnect:hover:not(:disabled) {
+  background: #c53030;
+}
+.huntflow-btn-secondary {
+  background: #edf2f7;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+.huntflow-btn-secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #2d3748;
+}
+.huntflow-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+.huntflow-select:focus {
+  outline: none;
+  border-color: #6b46c1;
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.15);
+}
+.huntflow-checkbox-group {
+  margin-bottom: 16px;
+}
+.huntflow-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.huntflow-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6b46c1;
+  cursor: pointer;
+}
+.huntflow-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Dark theme */
+body.options-theme-dark .huntflow-settings-section .options-extra-title {
+  color: #b794f4;
+  border-bottom-color: rgba(183, 148, 244, 0.25);
+}
+body.options-theme-dark .huntflow-auth-status.connected {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: rgba(63, 185, 80, 0.4);
+  color: #81c784;
+}
+body.options-theme-dark .huntflow-auth-status.error {
+  background: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.35);
+  color: #e57373;
+}
+body.options-theme-dark .huntflow-select {
+  background: #2d2d31;
+  border-color: rgba(255,255,255,.15);
+  color: #e8e8e8;
+}
+body.options-theme-dark .huntflow-select:focus {
+  border-color: #b794f4;
+  box-shadow: 0 0 0 3px rgba(183, 148, 244, 0.15);
+}
+body.options-theme-dark .huntflow-btn-connect {
+  background: linear-gradient(135deg, #805ad5, #9f7aea);
+}
+body.options-theme-dark .huntflow-btn-connect:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6b46c1, #805ad5);
+}
+body.options-theme-dark .huntflow-btn-secondary {
+  background: #3a3a40;
+  color: #b0b0b0;
+  border-color: #505058;
+}
+body.options-theme-dark .huntflow-btn-secondary:hover:not(:disabled) {
+  background: #48484f;
+  color: #e0e0e0;
+}
+
+/* System theme dark mode */
+@media (prefers-color-scheme: dark) {
+  body.options-theme-system .huntflow-settings-section .options-extra-title {
+    color: #b794f4;
+    border-bottom-color: rgba(183, 148, 244, 0.25);
+  }
+  body.options-theme-system .huntflow-auth-status.connected {
+    background: rgba(63, 185, 80, 0.15);
+    border-color: rgba(63, 185, 80, 0.4);
+    color: #81c784;
+  }
+  body.options-theme-system .huntflow-auth-status.error {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: rgba(244, 67, 54, 0.35);
+    color: #e57373;
+  }
+  body.options-theme-system .huntflow-select {
+    background: #2d2d31;
+    border-color: rgba(255,255,255,.15);
+    color: #e8e8e8;
+  }
+  body.options-theme-system .huntflow-select:focus {
+    border-color: #b794f4;
+    box-shadow: 0 0 0 3px rgba(183, 148, 244, 0.15);
+  }
+  body.options-theme-system .huntflow-btn-connect {
+    background: linear-gradient(135deg, #805ad5, #9f7aea);
+  }
+  body.options-theme-system .huntflow-btn-connect:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6b46c1, #805ad5);
+  }
+  body.options-theme-system .huntflow-btn-secondary {
+    background: #3a3a40;
+    color: #b0b0b0;
+    border-color: #505058;
+  }
+  body.options-theme-system .huntflow-btn-secondary:hover:not(:disabled) {
+    background: #48484f;
+    color: #e0e0e0;
+  }
+}

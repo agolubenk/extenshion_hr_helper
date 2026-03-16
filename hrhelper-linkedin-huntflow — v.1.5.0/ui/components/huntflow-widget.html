@@ -1,0 +1,57 @@
+<!-- Huntflow Widget Template for Content Script Injection -->
+<div class="huntflow-section" role="region" aria-label="Huntflow Integration">
+  <div class="huntflow-header">
+    <span class="huntflow-logo" aria-hidden="true">&#9670;</span>
+    <span class="huntflow-title">Huntflow</span>
+  </div>
+  <div class="huntflow-body" aria-live="polite">
+    <!-- State: not-authenticated -->
+    <div class="huntflow-state huntflow-state-auth" data-state="not-authenticated" style="display: none;">
+      <p class="huntflow-description">Подключите аккаунт Huntflow для сохранения кандидатов.</p>
+      <button class="btn-huntflow-connect" type="button">Подключить Huntflow</button>
+    </div>
+
+    <!-- State: idle (authenticated, ready to save) -->
+    <div class="huntflow-state huntflow-state-form" data-state="idle" style="display: none;">
+      <div class="huntflow-form">
+        <div class="form-group">
+          <label for="huntflow-vacancy-select">Вакансия:</label>
+          <select class="vacancy-dropdown" id="huntflow-vacancy-select">
+            <option value="">Выберите вакансию…</option>
+          </select>
+        </div>
+        <button class="btn-huntflow-save" type="button">
+          <span aria-hidden="true">&#10004;</span>
+          Сохранить в Huntflow
+        </button>
+      </div>
+    </div>
+
+    <!-- State: loading -->
+    <div class="huntflow-state huntflow-state-loading" data-state="loading" style="display: none;">
+      <div class="huntflow-loading">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Сохранение…</span>
+        <span class="sr-only">Сохранение кандидата в Huntflow</span>
+      </div>
+    </div>
+
+    <!-- State: success -->
+    <div class="huntflow-state huntflow-state-success" data-state="success" style="display: none;">
+      <div class="huntflow-success">
+        <span class="success-icon" aria-hidden="true">&#10003;</span>
+        <span>Кандидат сохранён!</span>
+        <a class="btn-view-huntflow" href="#" target="_blank" rel="noopener">Открыть в Huntflow</a>
+      </div>
+    </div>
+
+    <!-- State: error -->
+    <div class="huntflow-state huntflow-state-error" data-state="error" style="display: none;">
+      <div class="huntflow-error">
+        <span class="error-icon" aria-hidden="true">&#10007;</span>
+        <span class="error-message">Произошла ошибка</span>
+        <button class="btn-retry" type="button">Повторить</button>
+      </div>
+    </div>
+  </div>
+</div>
