@@ -25,10 +25,6 @@
       "matches": [ "*://*/*" ],
       "run_at": "document_start",
       "world": "MAIN"
-   }, {
-      "js": [ "js/linkedin-floating-button.js" ],
-      "matches": [ "*://www.linkedin.com/in/*", "*://linkedin.com/in/*" ],
-      "run_at": "document_idle"
    } ],
    "content_security_policy": {
       "object-src": "self",
@@ -54,7 +50,7 @@
    "version": "5.11.4",
    "web_accessible_resources": [ {
       "matches": [ "*://*/*" ],
-      "resources": [ "css/*", "img/*", "fonts/*", "icons/*" ]
+      "resources": [ "css/*", "img/*", "fonts/*" ]
    }, {
       "matches": [ "*://*/*" ],
       "resources": [ "js/hh.js", "js/facebook.js" ]
