@@ -2,16 +2,9 @@
  * Huntflow HR Helper — Floating Button for LinkedIn Profile Pages
  *
  * Adds a permanently visible, draggable floating button on LinkedIn profile
- * pages (linkedin.com/in/*).  Clicking the button opens the extension popup
- * (popup/popup.html) as a standalone popup window — exactly the same UI and
- * logic as clicking the toolbar icon.
- *
- * The popup's own getTab() helper supports a ?url= query-param, so we pass
- * the current LinkedIn URL to let the popup resolve the correct tab.
- *
- * Message to background service worker:
- *   { action: "OPEN_POPUP_WINDOW", linkedinUrl: <string> }
- *   → background opens popup.html?url=<encoded_url> via chrome.windows.create
+ * pages (linkedin.com/in/*).  Clicking the button programmatically opens the
+ * real extension popup via chrome.action.openPopup() — exactly the same as
+ * clicking the toolbar icon.
  */
 (function () {
   "use strict";
@@ -88,11 +81,11 @@
       btn.style.boxShadow = "0 2px 8px rgba(0,0,0,.25)";
     });
 
-    // Click → open popup window
+    // Click → open REAL extension popup
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      openPopupWindow();
+      openExtensionPopup();
     });
 
     wrapper.appendChild(btn);
@@ -117,37 +110,27 @@
     document.body.appendChild(wrapper);
   }
 
-  /* ── Open popup as a window ─────────────────────────────────────────── */
+  /* ── Open the REAL extension popup ──────────────────────────────────── */
   /**
-   * Sends a message to the background service worker asking it to open
-   * popup/popup.html as a popup window via chrome.windows.create().
+   * Sends a message to the background service worker asking it to call
+   * chrome.action.openPopup() — this opens the actual extension popup
+   * (the same one as clicking the toolbar icon).
    *
-   * The popup's getTab() parses ?url= from the query string and uses
-   * chrome.tabs.query({currentWindow:true, url:…}) to locate the LinkedIn
-   * tab.  Fallback: if background messaging fails, open via window.open().
+   * The popup then uses its own getTab() with {currentWindow:true, active:true}
+   * to find the LinkedIn tab — which works because the popup opens in the
+   * context of the same browser window.
    */
-  function openPopupWindow() {
+  function openExtensionPopup() {
     if (!isExtensionContextValid()) {
-      console.warn("[HRHelper] Extension context invalidated, cannot open popup.");
+      console.warn("[HRHelper] Extension context invalidated.");
       return;
     }
 
-    var linkedinUrl = location.href;
-
     chrome.runtime.sendMessage(
-      { action: "OPEN_POPUP_WINDOW", linkedinUrl: linkedinUrl },
+      { action: "HRHELPER_OPEN_REAL_POPUP" },
       function (response) {
         if (chrome.runtime.lastError) {
-          console.warn("[HRHelper] sendMessage error:", chrome.runtime.lastError.message);
-          // Fallback: open popup via window.open
-          try {
-            var popupUrl = chrome.runtime.getURL("popup/popup.html") +
-              "?url=" + encodeURIComponent(linkedinUrl);
-            window.open(popupUrl, "huntflow_popup",
-              "width=420,height=620,scrollbars=yes,resizable=yes");
-          } catch (err) {
-            console.error("[HRHelper] Fallback popup open failed:", err);
-          }
+          console.warn("[HRHelper] Could not open popup:", chrome.runtime.lastError.message);
         }
       }
     );
