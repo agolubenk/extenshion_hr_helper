@@ -1,4 +1,4 @@
-importScripts("shared/constants.js", "shared/utils/token.js");
+importScripts("shared/constants.js", "shared/utils/token.js", "background/huntflow-api.js");
 
 const DEFAULTS = self.__HRH__.DEFAULTS;
 const ACTIVE_PAGES_KEY = self.__HRH__.ACTIVE_PAGES_KEY;
@@ -6,6 +6,22 @@ const DEFAULT_ACTIVE_PAGES = self.__HRH__.DEFAULT_ACTIVE_PAGES;
 const DEFAULT_ICONS = self.__HRH__.DEFAULT_ICONS;
 const UNKNOWN_PAGE_ICONS = self.__HRH__.UNKNOWN_PAGE_ICONS;
 const normalizeToken = self.__HRH__.normalizeToken;
+
+/* ================================================================ */
+/*  Huntflow module instances                                        */
+/* ================================================================ */
+const huntflowAuth = new self.__HRH__.HuntflowAuthManager();
+const huntflowAPI = new self.__HRH__.HuntflowAPIClient(huntflowAuth);
+const dataTransformer = new self.__HRH__.DataTransformer();
+const vacancyCache = new self.__HRH__.VacancyCache(300000);
+const HuntflowErrorHandler = self.__HRH__.HuntflowErrorHandler;
+
+// Initialize auth state from storage on startup
+huntflowAuth.initialize();
+
+/* ================================================================ */
+/*  Existing HR Helper functions                                     */
+/* ================================================================ */
 
 /** Тип страницы по URL для проверки «активных страниц». */
 function getPageTypeFromUrl(url) {
@@ -139,8 +155,67 @@ async function doRequest({ path, method, body }) {
   }
 }
 
+/* ================================================================ */
+/*  Huntflow: save candidate handler                                 */
+/* ================================================================ */
+async function handleSaveCandidate({ candidate, vacancyId }) {
+  try {
+    const huntflowData = dataTransformer.transformLinkedInToHuntflow(candidate);
+
+    if (vacancyId) {
+      huntflowData.vacancy_id = vacancyId;
+    }
+
+    const result = await huntflowAPI.saveCandidate(huntflowData);
+
+    console.log("[Huntflow] Candidate saved:", result);
+
+    // Send notification if enabled
+    try {
+      const settings = await chrome.storage.local.get({ huntflow_notifications: true });
+      if (settings.huntflow_notifications !== false) {
+        chrome.notifications.create({
+          type: "basic",
+          iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
+          title: "Huntflow",
+          message: "Candidate saved successfully!",
+        });
+      }
+    } catch (_) {}
+
+    return {
+      success: true,
+      candidateId: result.id,
+      candidateUrl: "https://huntflow.ai/applicants/" + result.id,
+    };
+  } catch (error) {
+    console.error("[Huntflow] Failed to save candidate:", error);
+
+    const userMessage = HuntflowErrorHandler.handle(error, "saveCandidate");
+
+    try {
+      const settings = await chrome.storage.local.get({ huntflow_notifications: true });
+      if (settings.huntflow_notifications !== false) {
+        chrome.notifications.create({
+          type: "basic",
+          iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
+          title: "Huntflow Error",
+          message: "Failed to save: " + userMessage,
+        });
+      }
+    } catch (_) {}
+
+    throw error;
+  }
+}
+
+/* ================================================================ */
+/*  Message listener (existing + Huntflow)                           */
+/* ================================================================ */
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg) return;
+
+  /* --- Existing HR Helper handlers --- */
 
   if (msg.type === 'HRHELPER_GDRIVE_FILE_DETECTED') {
     chrome.storage.local.set({
@@ -188,17 +263,80 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type !== "HRHELPER_API") return;
+  if (msg.type === "HRHELPER_API") {
+    doRequest(msg.payload)
+      .then((result) => sendResponse(result))
+      .catch((e) =>
+        sendResponse({ ok: false, status: 0, json: { message: String(e) } })
+      );
+    return true;
+  }
 
-  doRequest(msg.payload)
-    .then((result) => sendResponse(result))
-    .catch((e) =>
-      sendResponse({ ok: false, status: 0, json: { message: String(e) } })
-    );
+  /* --- Open options page (from content script) --- */
+  if (msg.type === "HRHELPER_OPEN_OPTIONS") {
+    if (chrome.runtime.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    }
+    return;
+  }
 
-  return true;
+  /* --- Huntflow handlers --- */
+
+  if (msg.type === "HUNTFLOW_CHECK_AUTH") {
+    sendResponse({ authenticated: huntflowAuth.isAuthenticated() });
+    return;
+  }
+
+  if (msg.type === "HUNTFLOW_AUTHENTICATE") {
+    huntflowAuth
+      .authenticate(msg.token)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (msg.type === "HUNTFLOW_GET_VACANCIES") {
+    vacancyCache
+      .get(huntflowAPI)
+      .then((vacancies) => sendResponse({ success: true, vacancies: vacancies }))
+      .catch((error) => {
+        HuntflowErrorHandler.handle(error, "getVacancies");
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (msg.type === "HUNTFLOW_SAVE_CANDIDATE") {
+    handleSaveCandidate(msg.data)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (msg.type === "HUNTFLOW_LOGOUT") {
+    huntflowAuth
+      .logout()
+      .then(() => {
+        vacancyCache.invalidate();
+        sendResponse({ success: true });
+      })
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (msg.type === "HUNTFLOW_REFRESH_VACANCIES") {
+    vacancyCache.invalidate();
+    vacancyCache
+      .get(huntflowAPI)
+      .then((vacancies) => sendResponse({ success: true, vacancies: vacancies }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
+/* ================================================================ */
+/*  Tab/icon management (existing)                                   */
+/* ================================================================ */
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);

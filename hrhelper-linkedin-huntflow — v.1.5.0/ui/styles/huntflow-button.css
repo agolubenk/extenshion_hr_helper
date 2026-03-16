@@ -1,0 +1,260 @@
+/* Huntflow Section */
+.huntflow-section {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.huntflow-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.huntflow-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.huntflow-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+/* Huntflow Content States */
+.huntflow-content {
+  margin-top: 12px;
+}
+
+/* Auth State */
+.huntflow-auth {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.huntflow-auth p {
+  color: #7f8c8d;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.btn-huntflow-connect {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-huntflow-connect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Form State */
+.huntflow-form .form-group {
+  margin-bottom: 12px;
+}
+
+.huntflow-form label {
+  display: block;
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.vacancy-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dfe6e9;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vacancy-dropdown:hover {
+  border-color: #667eea;
+}
+
+.vacancy-dropdown:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-huntflow-save {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-huntflow-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+}
+
+.btn-huntflow-save:active {
+  transform: translateY(0);
+}
+
+.btn-huntflow-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading State */
+.huntflow-loading {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.huntflow-loading p {
+  color: #7f8c8d;
+  font-size: 13px;
+}
+
+/* Success State */
+.huntflow-success {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.success-icon {
+  font-size: 48px;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.huntflow-success p {
+  color: #00b894;
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.btn-view-huntflow {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-view-huntflow:hover {
+  background: #667eea;
+  color: white;
+}
+
+/* Error State */
+.huntflow-error {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.error-icon {
+  font-size: 48px;
+  animation: shake 0.5s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.huntflow-error p {
+  color: #d63031;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.btn-retry {
+  background: #d63031;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-retry:hover {
+  background: #e17055;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

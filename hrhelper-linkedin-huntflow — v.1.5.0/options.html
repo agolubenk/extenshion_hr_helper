@@ -121,6 +121,63 @@
           </button>
         </div>
       </section>
+
+      <hr class="options-divider" />
+
+      <section class="options-extra huntflow-settings-section">
+        <h2 class="options-extra-title">Huntflow API</h2>
+
+        <div id="huntflow-auth-status" class="huntflow-auth-status" aria-live="polite" style="display: none;"></div>
+
+        <div class="form-group">
+          <label for="huntflowToken">API Token Huntflow</label>
+          <input type="password" id="huntflowToken" placeholder="Вставьте API токен Huntflow" />
+          <div class="hint">
+            Получить токен: откройте
+            <a href="https://api.huntflow.ai" target="_blank" rel="noopener">Huntflow API Settings</a>
+            и скопируйте ваш персональный токен.
+          </div>
+        </div>
+
+        <div class="huntflow-auth-buttons">
+          <button type="button" id="huntflow-connect-btn" class="huntflow-btn huntflow-btn-connect">Подключить Huntflow</button>
+          <button type="button" id="huntflow-disconnect-btn" class="huntflow-btn huntflow-btn-disconnect" style="display: none;">Отключить</button>
+        </div>
+
+        <h2 class="options-extra-title" style="margin-top: 24px;">Настройки по умолчанию</h2>
+
+        <div class="form-group">
+          <label for="huntflow-default-vacancy">Вакансия по умолчанию</label>
+          <select id="huntflow-default-vacancy" class="huntflow-select">
+            <option value="">Не выбрана</option>
+          </select>
+          <div class="hint">Автоматически выбирать эту вакансию при сохранении кандидатов.</div>
+        </div>
+
+        <div class="huntflow-checkbox-group">
+          <label class="huntflow-checkbox-label">
+            <input type="checkbox" id="huntflow-auto-save" />
+            <span>Авто-сохранение при просмотре профиля</span>
+          </label>
+          <div class="hint">Автоматически сохранять кандидатов при просмотре их LinkedIn профиля.</div>
+        </div>
+
+        <div class="huntflow-checkbox-group">
+          <label class="huntflow-checkbox-label">
+            <input type="checkbox" id="huntflow-notifications" checked />
+            <span>Показывать уведомления</span>
+          </label>
+          <div class="hint">Уведомления при сохранении кандидатов в Huntflow.</div>
+        </div>
+
+        <h2 class="options-extra-title" style="margin-top: 24px;">Быстрые действия</h2>
+
+        <div class="huntflow-quick-actions">
+          <button type="button" id="huntflow-test-btn" class="huntflow-btn huntflow-btn-secondary">Тест соединения</button>
+          <button type="button" id="huntflow-refresh-btn" class="huntflow-btn huntflow-btn-secondary">Обновить вакансии</button>
+          <button type="button" id="huntflow-dashboard-btn" class="huntflow-btn huntflow-btn-secondary">Открыть Huntflow</button>
+        </div>
+      </section>
     </div>
 
     <div class="panel panel-changelog">
@@ -130,6 +187,18 @@
       </div>
       <div class="changelog-scroll">
       <ul class="changelog-list">
+        <li class="changelog-item">
+          <div class="changelog-version">2.0.0 <span class="changelog-date">(16.03.2026)</span></div>
+          <ul class="changelog-ul">
+            <li><strong>Huntflow API</strong>: прямая интеграция с Huntflow API — сохранение кандидатов в Huntflow прямо со страницы LinkedIn.</li>
+            <li><strong>Huntflow API</strong>: аутентификация по токену, выбор вакансии, автосохранение, уведомления.</li>
+            <li><strong>LinkedIn</strong>: секция Huntflow в плавающем окне — кнопка сохранения, селектор вакансий, состояния загрузки/успеха/ошибки.</li>
+            <li><strong>Настройки</strong>: новый раздел «Huntflow API» — подключение, настройки по умолчанию, быстрые действия.</li>
+            <li><strong>Клавиатурные сочетания</strong>: Alt+H (фокус на секцию Huntflow), Alt+S (быстрое сохранение).</li>
+            <li><strong>Доступность</strong>: ARIA-метки, роли, объявления для скринридеров.</li>
+            <li><strong>Производительность</strong>: кэширование вакансий (5 мин TTL), debounce UI-обновлений, ленивая загрузка модулей.</li>
+          </ul>
+        </li>
         <li class="changelog-item">
           <div class="changelog-version">1.5.0 <span class="changelog-date">(02.04.2026)</span></div>
           <ul class="changelog-ul">
