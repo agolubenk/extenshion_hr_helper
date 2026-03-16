@@ -1096,6 +1096,79 @@ function populateFloatingWidgetBody(body) {
 
   appendFloatingStatusBlock(body, btnStyle);
   appendFloatingCommentsBlock(body);
+  addCreateCandidateButton(body);
+}
+
+function addCreateCandidateButton(body) {
+  // Показываем кнопку только если кандидат НЕ найден в системе (нет вакансий, нет candidateInfo)
+  var info = STATE.linkedinFull.candidateInfo;
+  var vacancies = STATE.linkedinFull.vacancies || [];
+  if (info || vacancies.length > 0) return;
+  if (STATE.current.mode !== 'open' && STATE.current.mode !== 'idle') return;
+
+  var LinkedInParser = (HRH && HRH.LinkedInParser) || (window.__HRH__ && window.__HRH__.LinkedInParser);
+  var HuntflowAPI = (HRH && HRH.HuntflowAPI) || (window.__HRH__ && window.__HRH__.HuntflowAPI);
+  if (!LinkedInParser || !HuntflowAPI) return;
+
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'hrhelper-create-candidate-btn';
+  btn.textContent = 'Создать в Huntflow';
+  btn.style.cssText = 'display:block;width:100%;margin-top:12px;padding:10px 16px;border:none;border-radius:8px;background:var(--hrhelper-accent,#0a66c2);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s,opacity .2s;';
+  btn.addEventListener('mouseenter', function () { if (!btn.disabled) btn.style.opacity = '0.85'; });
+  btn.addEventListener('mouseleave', function () { btn.style.opacity = '1'; });
+
+  btn.addEventListener('click', async function () {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Создание...';
+    btn.style.opacity = '0.7';
+
+    try {
+      var profileData = LinkedInParser.extractFullProfile();
+      var basic = profileData.basic || {};
+      var nameParts = (basic.fullName || '').split(/\s+/);
+      var candidateData = {
+        first_name: nameParts[0] || '',
+        last_name: nameParts.slice(1).join(' ') || '',
+        position: basic.headline || '',
+        externals: [{ type: 'linkedin', value: basic.profileUrl || location.href.split('?')[0] }],
+        social: [{ type: 'linkedin', value: basic.profileUrl || location.href.split('?')[0] }],
+        experience: (profileData.experience || []).map(function (e) {
+          return { position: e.title, company: e.company, date_range: e.dateRange, description: e.description };
+        }),
+        education: (profileData.education || []).map(function (e) {
+          return { school: e.school, degree: e.degree, date_range: e.dateRange };
+        }),
+        skills: profileData.skills || []
+      };
+
+      var res = await HuntflowAPI.createCandidate(candidateData);
+      var data = await res.json();
+
+      if (res.ok && data && data.success !== false) {
+        btn.textContent = '\u2713 Создано';
+        btn.style.background = 'var(--hrhelper-success,#198754)';
+        STATE.linkedinFull.candidateInfo = data.candidate || data;
+      } else {
+        throw { message: (data && data.message) || 'Ошибка создания', status: res.status };
+      }
+    } catch (err) {
+      btn.textContent = '\u2717 Ошибка';
+      btn.style.background = 'var(--hrhelper-danger,#dc3545)';
+      var ErrorHandler = (HRH && HRH.ErrorHandler) || (window.__HRH__ && window.__HRH__.ErrorHandler);
+      if (ErrorHandler) ErrorHandler.handle(err, 'linkedin-create-candidate');
+    }
+
+    setTimeout(function () {
+      btn.disabled = false;
+      btn.textContent = 'Создать в Huntflow';
+      btn.style.background = 'var(--hrhelper-accent,#0a66c2)';
+      btn.style.opacity = '1';
+    }, 2000);
+  });
+
+  body.appendChild(btn);
 }
 
 function appendFloatingCommentsBlock(body) {
