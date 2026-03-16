@@ -6,7 +6,9 @@
  * creation / open-in-Huntflow logic that the main extension already uses.
  *
  * Communication with the background service worker uses the standard
- * { type: "HRHELPER_API", payload } message format via chrome.runtime.sendMessage.
+ * { action: "fetch", payload } message format via chrome.runtime.sendMessage.
+ * Clicking the button opens popup.html in a new tab via the "OPEN_POPUP_WINDOW"
+ * message to the background service worker.
  */
 (function () {
   "use strict";
@@ -29,33 +31,32 @@
     }
   }
 
+  /**
+   * Proxy an API request through the background service worker using the
+   * existing "fetch" action that background.js already handles.
+   * background.js prepends the base Huntflow URL and calls customFetch().
+   */
   function apiFetch(path, init) {
     init = init || {};
     var method = init.method || "GET";
-    var body = init.body;
-    if (typeof body === "string") {
-      try { body = JSON.parse(body); } catch (_) { body = undefined; }
-    }
     if (!isExtensionContextValid()) {
-      return Promise.resolve({ ok: false, status: 0, json: function () { return Promise.resolve({ success: false, message: "Extension context invalidated." }); } });
+      return Promise.resolve({ ok: false, data: null });
     }
     return new Promise(function (resolve, reject) {
       try {
         chrome.runtime.sendMessage(
-          { type: "HRHELPER_API", payload: { path: path, method: method, body: body } },
+          { action: "fetch", payload: { url: path.replace(/^\//, ""), method: method } },
           function (response) {
             if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-            var r = response;
             resolve({
-              ok: !!(r && r.ok),
-              status: (r && r.status) || 0,
-              json: function () { return Promise.resolve(r && r.json != null ? r.json : null); }
+              ok: !!(response && response.success),
+              data: response && response.data ? response.data : null
             });
           }
         );
       } catch (err) { reject(err); }
     }).catch(function () {
-      return { ok: false, status: 0, json: function () { return Promise.resolve(null); } };
+      return { ok: false, data: null };
     });
   }
 
@@ -233,6 +234,30 @@
   }
 
   /* ── Core logic ────────────────────────────────────────────────────── */
+
+  /**
+   * Open the extension popup in a new popup-type window.
+   * The popup's getTab() parses ?url= from the query string and uses
+   * chrome.tabs.query({currentWindow:true, url:…}) to locate the LinkedIn
+   * tab.  Because we open the popup as a new tab in the SAME browser
+   * window, that query correctly finds the LinkedIn tab.
+   */
+  function openPopupWindow() {
+    if (!isExtensionContextValid()) return;
+    var linkedinUrl = location.href;
+    chrome.runtime.sendMessage(
+      { action: "OPEN_POPUP_WINDOW", linkedinUrl: linkedinUrl },
+      function (response) {
+        if (chrome.runtime.lastError) {
+          console.warn("[HRHelper] Failed to open popup window:", chrome.runtime.lastError.message);
+          state.status = "error";
+          updateDot();
+          updateTooltip("Не удалось открыть окно");
+        }
+      }
+    );
+  }
+
   async function onQuickButtonClick() {
     if (state.busy) return;
 
@@ -242,97 +267,8 @@
       return;
     }
 
-    // Otherwise, try to make the existing floating widget visible and focused
-    // First try: find and click the existing extension's action button
-    var existingBtn = document.querySelector(".hrhelper-action-btn");
-    if (existingBtn) {
-      existingBtn.click();
-      return;
-    }
-
-    // Second try: make the existing floating widget visible
-    var existingWidget = document.querySelector("[data-hrhelper-floating='true']");
-    if (existingWidget) {
-      existingWidget.style.display = "";
-      existingWidget.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      // Also update storage to mark it as visible
-      try {
-        chrome.storage.local.set({ hrhelper_linkedin_floating_hidden: false });
-      } catch (_) {}
-      return;
-    }
-
-    // Third try: send a message to trigger floating widget display
-    // This uses the same message format the popup uses
-    try {
-      chrome.storage.local.set({ hrhelper_linkedin_floating_hidden: false });
-    } catch (_) {}
-
-    // If no existing widget, we trigger the status check ourselves and
-    // provide the same UX: open Huntflow if linked, or show the set-link
-    // API call flow
-    state.busy = true;
-    state.status = "loading";
-    updateDot();
-    updateTooltip("Загрузка...");
-
-    try {
-      var profileUrl = normalizeLinkedInProfileUrl(location.href);
-      if (!profileUrl) {
-        state.status = "error";
-        updateDot();
-        updateTooltip("Не удалось определить профиль");
-        return;
-      }
-
-      var q = new URLSearchParams();
-      q.set("linkedin_url", profileUrl);
-      var res = await apiFetch(
-        "/api/v1/huntflow/linkedin-applicants/status/?" + q.toString(),
-        { method: "GET" }
-      );
-      var data = await res.json();
-
-      if (res.ok && data) {
-        if (data.app_url || data.target_url) {
-          // Candidate already exists in Huntflow
-          state.huntflowUrl = data.app_url || data.target_url;
-          state.saved = true;
-          state.status = "linked";
-          updateDot();
-          updateTooltip("Открыть в Huntflow");
-          window.open(state.huntflowUrl, "_blank", "noopener,noreferrer");
-        } else {
-          // Candidate not yet in Huntflow — make the extension's widget visible
-          state.status = "idle";
-          updateDot();
-          updateTooltip("Создать в Huntflow");
-
-          // Attempt to show the extension's floating widget
-          try {
-            chrome.storage.local.set({ hrhelper_linkedin_floating_hidden: false });
-          } catch (_) {}
-          // Re-check for the widget (might appear after storage update)
-          setTimeout(function () {
-            var w = document.querySelector("[data-hrhelper-floating='true']");
-            if (w) {
-              w.style.display = "";
-              w.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }
-          }, 300);
-        }
-      } else {
-        state.status = "error";
-        updateDot();
-        updateTooltip("Ошибка: " + ((data && data.message) || "Не удалось связаться с сервером"));
-      }
-    } catch (err) {
-      state.status = "error";
-      updateDot();
-      updateTooltip("Ошибка: " + (err.message || "Неизвестная ошибка"));
-    } finally {
-      state.busy = false;
-    }
+    // Open the popup in a new window — same flow as clicking the toolbar icon
+    openPopupWindow();
   }
 
   /* ── Initial status check ──────────────────────────────────────────── */
@@ -357,7 +293,7 @@
         "/api/v1/huntflow/linkedin-applicants/status/?" + q.toString(),
         { method: "GET" }
       );
-      var data = await res.json();
+      var data = res.data;
 
       if (res.ok && data && (data.app_url || data.target_url)) {
         state.huntflowUrl = data.app_url || data.target_url;
