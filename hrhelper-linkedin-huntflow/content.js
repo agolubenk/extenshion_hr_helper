@@ -829,43 +829,82 @@ function populateFloatingWidgetBody(body) {
   const rowStyle = "display:flex;align-items:center;gap:6px;flex-wrap:wrap;";
 
   if (STATE.current.mode === "input") {
-    // Huntflow popup button — opens real extension popup (like clicking toolbar icon)
-    const popupBtnRow = document.createElement("div");
-    popupBtnRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
-    const popupBtn = document.createElement("button");
-    popupBtn.type = "button";
-    popupBtn.title = "Добавить в Huntflow";
-    popupBtn.style.cssText = "all:initial;display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;border-radius:6px;border:1px solid var(--hrhelper-border,#ccc);background:var(--hrhelper-btn-bg,#fff);cursor:pointer;transition:background .2s,box-shadow .2s;";
-    let popupIconUrl = "";
-    try { popupIconUrl = chrome.runtime.getURL("icons/icon-32.png"); } catch (_) {}
-    const popupIcon = document.createElement("img");
-    popupIcon.src = popupIconUrl;
-    popupIcon.alt = "Huntflow";
-    popupIcon.style.cssText = "width:20px;height:20px;pointer-events:none;";
-    popupBtn.appendChild(popupIcon);
-    popupBtn.addEventListener("mouseenter", () => { popupBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,.15)"; });
-    popupBtn.addEventListener("mouseleave", () => { popupBtn.style.boxShadow = "none"; });
-    popupBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      try {
-        if (chrome.runtime?.id) {
-          chrome.runtime.sendMessage({ action: "HRHELPER_OPEN_REAL_POPUP" }, (resp) => {
-            if (chrome.runtime.lastError) {
-              console.warn("[HRHelper] Could not open popup:", chrome.runtime.lastError.message);
-            }
-          });
+    // --- Кнопка «Создать в Huntflow» (маленькая квадратная, перед формой ввода ссылки) ---
+    const HuntflowAPI_btn = (typeof HRH !== 'undefined' && HRH && HRH.HuntflowAPI) || (window.__HRH__ && window.__HRH__.HuntflowAPI);
+    const LinkedInParser_btn = (typeof HRH !== 'undefined' && HRH && HRH.LinkedInParser) || (window.__HRH__ && window.__HRH__.LinkedInParser);
+    // Показываем кнопку только если кандидат НЕ найден (нет вакансий, нет candidateInfo) и API доступно
+    const btnCandidateInfo = STATE.linkedinFull.candidateInfo;
+    const btnVacancies = STATE.linkedinFull.vacancies || [];
+    if (HuntflowAPI_btn && LinkedInParser_btn && !btnCandidateInfo && btnVacancies.length === 0) {
+      const createRow = document.createElement("div");
+      createRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+      const createBtn = document.createElement("button");
+      createBtn.type = "button";
+      createBtn.title = "Создать кандидата в Huntflow";
+      createBtn.style.cssText = "all:initial;display:flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;border-radius:6px;border:1px solid var(--hrhelper-border,#ccc);background:var(--hrhelper-btn-bg,#fff);cursor:pointer;transition:background .2s,box-shadow .2s;";
+      // Huntflow icon — голубой X
+      createBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="4" fill="#26C1D0"/><path d="M9 9L16 16M16 16L23 9M16 16L9 23M16 16L23 23" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const createLabel = document.createElement("span");
+      createLabel.style.cssText = "font-size:11px;color:var(--hrhelper-muted,#666);cursor:default;";
+      createLabel.textContent = "Создать в Huntflow";
+      createBtn.addEventListener("mouseenter", () => { createBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,.15)"; createBtn.style.background = "var(--hrhelper-border,rgba(0,0,0,.06))"; });
+      createBtn.addEventListener("mouseleave", () => { createBtn.style.boxShadow = "none"; createBtn.style.background = "var(--hrhelper-btn-bg,#fff)"; });
+      createBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (createBtn.disabled) return;
+        createBtn.disabled = true;
+        const origHTML = createBtn.innerHTML;
+        createBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#26C1D0" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>';
+        createLabel.textContent = "Создание...";
+        try {
+          const profileData = LinkedInParser_btn.extractFullProfile();
+          const basic = profileData.basic || {};
+          const nameParts = (basic.fullName || '').split(/\s+/);
+          const candidateData = {
+            first_name: nameParts[0] || '',
+            last_name: nameParts.slice(1).join(' ') || '',
+            position: basic.headline || '',
+            externals: [{ type: 'linkedin', value: basic.profileUrl || location.href.split('?')[0] }],
+            social: [{ type: 'linkedin', value: basic.profileUrl || location.href.split('?')[0] }],
+            experience: (profileData.experience || []).map(function (exp) {
+              return { position: exp.title, company: exp.company, date_range: exp.dateRange, description: exp.description };
+            }),
+            education: (profileData.education || []).map(function (edu) {
+              return { school: edu.school, degree: edu.degree, date_range: edu.dateRange };
+            }),
+            skills: profileData.skills || []
+          };
+          const res = await HuntflowAPI_btn.createCandidate(candidateData);
+          const data = await res.json();
+          if (res.ok && data && data.success !== false) {
+            createBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#198754"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+            createLabel.textContent = "Создано";
+            createLabel.style.color = "var(--hrhelper-success,#198754)";
+            STATE.linkedinFull.candidateInfo = data.candidate || data;
+            // Через 2 секунды обновить виджет
+            setTimeout(() => { applyStateToAllButtons(); }, 2000);
+          } else {
+            throw { message: (data && data.message) || 'Ошибка создания', status: res.status };
+          }
+        } catch (err) {
+          createBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#dc3545"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+          createLabel.textContent = "Ошибка";
+          createLabel.style.color = "var(--hrhelper-danger,#dc3545)";
+          const ErrorHandler = (typeof HRH !== 'undefined' && HRH && HRH.ErrorHandler) || (window.__HRH__ && window.__HRH__.ErrorHandler);
+          if (ErrorHandler) ErrorHandler.handle(err, 'linkedin-create-candidate-widget');
+          setTimeout(() => {
+            createBtn.disabled = false;
+            createBtn.innerHTML = origHTML;
+            createLabel.textContent = "Создать в Huntflow";
+            createLabel.style.color = "var(--hrhelper-muted,#666)";
+          }, 2500);
         }
-      } catch (_) {
-        console.warn("[HRHelper] Extension context invalidated.");
-      }
-    });
-    const popupLabel = document.createElement("span");
-    popupLabel.style.cssText = "font-size:11px;color:var(--hrhelper-muted,#666);";
-    popupLabel.textContent = "Добавить в Huntflow";
-    popupBtnRow.appendChild(popupBtn);
-    popupBtnRow.appendChild(popupLabel);
-    body.appendChild(popupBtnRow);
+      });
+      createRow.appendChild(createBtn);
+      createRow.appendChild(createLabel);
+      body.appendChild(createRow);
+    }
 
     const label = document.createElement("label");
     label.className = "hrhelper-body-accent";
@@ -910,7 +949,6 @@ function populateFloatingWidgetBody(body) {
     desc.style.cssText = "font-size:11px;";
     desc.textContent = "Вставьте ссылку и нажмите «Сохранить».";
     body.appendChild(desc);
-    addCreateCandidateButton(body);
     return;
   }
 
