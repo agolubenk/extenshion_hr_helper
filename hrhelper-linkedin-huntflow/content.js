@@ -872,6 +872,7 @@ function populateFloatingWidgetBody(body) {
     desc.style.cssText = "font-size:11px;";
     desc.textContent = "Вставьте ссылку и нажмите «Сохранить».";
     body.appendChild(desc);
+    addCreateCandidateButton(body);
     return;
   }
 
@@ -1104,7 +1105,7 @@ function addCreateCandidateButton(body) {
   var info = STATE.linkedinFull.candidateInfo;
   var vacancies = STATE.linkedinFull.vacancies || [];
   if (info || vacancies.length > 0) return;
-  if (STATE.current.mode !== 'open' && STATE.current.mode !== 'idle') return;
+  if (STATE.current.mode !== 'open' && STATE.current.mode !== 'idle' && STATE.current.mode !== 'input') return;
 
   var LinkedInParser = (HRH && HRH.LinkedInParser) || (window.__HRH__ && window.__HRH__.LinkedInParser);
   var HuntflowAPI = (HRH && HRH.HuntflowAPI) || (window.__HRH__ && window.__HRH__.HuntflowAPI);
