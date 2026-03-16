@@ -142,6 +142,32 @@ async function doRequest({ path, method, body }) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg) return;
 
+  // Open real extension popup (chrome.action.openPopup, Chrome 127+)
+  if (msg.action === "HRHELPER_OPEN_REAL_POPUP") {
+    const opts = {};
+    if (_sender && _sender.tab && _sender.tab.windowId) {
+      opts.windowId = _sender.tab.windowId;
+    }
+    if (typeof chrome.action.openPopup === "function") {
+      chrome.action.openPopup(opts).then(() => {
+        sendResponse({ success: true });
+      }).catch((err) => {
+        console.warn("[HRHelper] openPopup failed:", err);
+        sendResponse({ success: false, error: String(err) });
+      });
+    } else {
+      // Fallback: open popup.html in a new tab
+      const tabOpts = { url: chrome.runtime.getURL("popup.html"), active: true };
+      if (_sender && _sender.tab && _sender.tab.windowId) {
+        tabOpts.windowId = _sender.tab.windowId;
+      }
+      chrome.tabs.create(tabOpts, () => {
+        sendResponse({ success: true, fallback: true });
+      });
+    }
+    return true;
+  }
+
   if (msg.type === 'HRHELPER_GDRIVE_FILE_DETECTED') {
     chrome.storage.local.set({
       currentGDriveFile: msg.payload

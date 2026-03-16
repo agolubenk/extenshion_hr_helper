@@ -9,6 +9,12 @@
 (function () {
   "use strict";
 
+  /* ── DISABLED: Floating button moved into HR Helper widget ──────── */
+  /* The Huntflow popup button is now integrated into the HR Helper
+     floating widget (hrhelper-linkedin-huntflow/content.js).
+     This standalone floating button is no longer needed. */
+  return;
+
   /* ── Guards ────────────────────────────────────────────────────────── */
   var IS_PROFILE_PAGE =
     location.href.includes("/in/") && !location.href.includes("/search/");

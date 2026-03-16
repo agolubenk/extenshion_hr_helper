@@ -829,6 +829,44 @@ function populateFloatingWidgetBody(body) {
   const rowStyle = "display:flex;align-items:center;gap:6px;flex-wrap:wrap;";
 
   if (STATE.current.mode === "input") {
+    // Huntflow popup button — opens real extension popup (like clicking toolbar icon)
+    const popupBtnRow = document.createElement("div");
+    popupBtnRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+    const popupBtn = document.createElement("button");
+    popupBtn.type = "button";
+    popupBtn.title = "Добавить в Huntflow";
+    popupBtn.style.cssText = "all:initial;display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;border-radius:6px;border:1px solid var(--hrhelper-border,#ccc);background:var(--hrhelper-btn-bg,#fff);cursor:pointer;transition:background .2s,box-shadow .2s;";
+    let popupIconUrl = "";
+    try { popupIconUrl = chrome.runtime.getURL("icons/icon-32.png"); } catch (_) {}
+    const popupIcon = document.createElement("img");
+    popupIcon.src = popupIconUrl;
+    popupIcon.alt = "Huntflow";
+    popupIcon.style.cssText = "width:20px;height:20px;pointer-events:none;";
+    popupBtn.appendChild(popupIcon);
+    popupBtn.addEventListener("mouseenter", () => { popupBtn.style.boxShadow = "0 2px 8px rgba(0,0,0,.15)"; });
+    popupBtn.addEventListener("mouseleave", () => { popupBtn.style.boxShadow = "none"; });
+    popupBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        if (chrome.runtime?.id) {
+          chrome.runtime.sendMessage({ action: "HRHELPER_OPEN_REAL_POPUP" }, (resp) => {
+            if (chrome.runtime.lastError) {
+              console.warn("[HRHelper] Could not open popup:", chrome.runtime.lastError.message);
+            }
+          });
+        }
+      } catch (_) {
+        console.warn("[HRHelper] Extension context invalidated.");
+      }
+    });
+    const popupLabel = document.createElement("span");
+    popupLabel.style.cssText = "font-size:11px;color:var(--hrhelper-muted,#666);";
+    popupLabel.textContent = "Добавить в Huntflow";
+    popupBtnRow.appendChild(popupBtn);
+    popupBtnRow.appendChild(popupLabel);
+    body.appendChild(popupBtnRow);
+
     const label = document.createElement("label");
     label.className = "hrhelper-body-accent";
     label.style.cssText = "font-size:12px;font-weight:600;display:block;margin-bottom:4px;";
