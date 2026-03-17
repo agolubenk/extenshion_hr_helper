@@ -1,0 +1,17 @@
+{
+   "actionTitle": {
+      "message": "Save applicant"
+   },
+   "alreadyAdded": {
+      "message": "Already added to vacancy"
+   },
+   "extensionDescription": {
+      "message": "Applicant Tracking System"
+   },
+   "extensionName": {
+      "message": "Huntflow Magic Button"
+   },
+   "shortName": {
+      "message": "Magic Button"
+   }
+}
