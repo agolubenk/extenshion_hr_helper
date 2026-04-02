@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HR Helper — Гибкие настройки</title>
+  <link rel="stylesheet" href="options.css" />
+  <style>
+    :root {
+      --fs-bg: #ffffff;
+      --fs-panel-bg: #ffffff;
+      --fs-panel-border: rgba(0,0,0,.1);
+      --fs-panel-shadow: 0 2px 14px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --fs-accent: #0a66c2;
+      --fs-accent-soft: rgba(10, 102, 194, 0.14);
+      --fs-border: rgba(0,0,0,.14);
+      --fs-border-strong: rgba(0,0,0,.22);
+      --fs-muted: #666;
+      --fs-text: #333;
+      --fs-surface: rgba(0,0,0,.04);
+      --fs-surface-hover: rgba(0,0,0,.08);
+      --fs-focus: rgba(10, 102, 194, 0.22);
+      --fs-danger: #c62828;
+      --fs-danger-bg: rgba(244, 67, 54, 0.10);
+      --fs-ok: #1b5e20;
+      --fs-ok-bg: rgba(46, 125, 50, 0.10);
+      --fs-input-bg: #ffffff;
+    }
+
+    body.options-theme-light {
+      color-scheme: light;
+    }
+
+    body.options-theme-dark {
+      color-scheme: dark;
+      --fs-bg: #252529;
+      --fs-panel-bg: #252529;
+      --fs-panel-border: #404040;
+      --fs-panel-shadow: 0 8px 32px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.06);
+      --fs-accent: #64b5f6;
+      --fs-accent-soft: rgba(100, 181, 246, 0.18);
+      --fs-border: rgba(255,255,255,.16);
+      --fs-border-strong: rgba(255,255,255,.26);
+      --fs-muted: #b0b0b0;
+      --fs-text: #e8eaed;
+      --fs-surface: rgba(255,255,255,.08);
+      --fs-surface-hover: rgba(255,255,255,.12);
+      --fs-focus: rgba(100, 181, 246, 0.35);
+      --fs-danger: #ef9a9a;
+      --fs-danger-bg: rgba(244, 67, 54, 0.16);
+      --fs-ok: #81c784;
+      --fs-ok-bg: rgba(76, 175, 80, 0.16);
+      --fs-input-bg: #2d2d31;
+    }
+    @media (prefers-color-scheme: light) {
+      body.options-theme-system {
+        color-scheme: light;
+      }
+    }
+    @media (prefers-color-scheme: dark) {
+      body.options-theme-system {
+        color-scheme: dark;
+        --fs-bg: #252529;
+        --fs-panel-bg: #252529;
+        --fs-panel-border: #404040;
+        --fs-panel-shadow: 0 8px 32px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.06);
+        --fs-accent: #64b5f6;
+        --fs-accent-soft: rgba(100, 181, 246, 0.18);
+        --fs-border: rgba(255,255,255,.16);
+        --fs-border-strong: rgba(255,255,255,.26);
+        --fs-muted: #b0b0b0;
+        --fs-text: #e8eaed;
+        --fs-surface: rgba(255,255,255,.08);
+        --fs-surface-hover: rgba(255,255,255,.12);
+        --fs-focus: rgba(100, 181, 246, 0.35);
+        --fs-danger: #ef9a9a;
+        --fs-danger-bg: rgba(244, 67, 54, 0.16);
+        --fs-ok: #81c784;
+        --fs-ok-bg: rgba(76, 175, 80, 0.16);
+        --fs-input-bg: #2d2d31;
+      }
+    }
+
+    .page-wrap.flex-settings-page {
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .flex-settings-page .panel.panel-settings.flex-panel {
+      flex: 0 1 740px;
+      width: 100%;
+      max-width: 740px;
+      background: var(--fs-panel-bg);
+      border: 1px solid var(--fs-panel-border);
+      border-radius: 14px;
+      box-shadow: var(--fs-panel-shadow);
+      padding: 22px 24px 26px;
+    }
+    .flex-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 18px; }
+    .flex-header h1 { margin: 0; color: var(--fs-text); }
+    .flex-settings-page .options-extra-desc b { color: var(--fs-text); font-weight: 700; }
+
+    .flex-settings-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 20px;
+      padding: 4px;
+      border-radius: 10px;
+      background: var(--fs-surface);
+      border: 1px solid var(--fs-border);
+    }
+    button.flex-tab {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--fs-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+    }
+    button.flex-tab:hover {
+      background: var(--fs-surface-hover);
+      color: var(--fs-text);
+    }
+    button.flex-tab:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--fs-focus);
+    }
+    button.flex-tab[aria-selected="true"] {
+      background: var(--fs-panel-bg);
+      color: var(--fs-text);
+      border-color: var(--fs-border-strong);
+      box-shadow: 0 0 0 2px var(--fs-accent-soft), 0 1px 3px rgba(0,0,0,.08);
+    }
+    body.options-theme-dark button.flex-tab[aria-selected="true"] {
+      box-shadow: 0 0 0 2px var(--fs-accent-soft), 0 2px 12px rgba(0,0,0,.35);
+    }
+    @media (prefers-color-scheme: dark) {
+      body.options-theme-system button.flex-tab[aria-selected="true"] {
+        box-shadow: 0 0 0 2px var(--fs-accent-soft), 0 2px 12px rgba(0,0,0,.35);
+      }
+    }
+    .flex-tab-panel { padding-top: 4px; }
+
+    .pill-btn,
+    .secondary-btn,
+    .danger-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--fs-border-strong);
+      background: var(--fs-surface);
+      color: var(--fs-text);
+      transition: background .15s, box-shadow .15s, transform .05s;
+    }
+    .pill-btn:hover,
+    .secondary-btn:hover { background: var(--fs-surface-hover); }
+    .pill-btn:active,
+    .secondary-btn:active,
+    .danger-btn:active { transform: translateY(0.5px); }
+    .pill-btn:focus-visible,
+    .secondary-btn:focus-visible,
+    .danger-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--fs-focus); }
+
+    .danger-btn {
+      background: var(--fs-danger-bg);
+      border-color: color-mix(in srgb, var(--fs-danger) 40%, transparent);
+      color: var(--fs-danger);
+    }
+    .danger-btn:hover { background: color-mix(in srgb, var(--fs-danger-bg) 80%, transparent); }
+
+    .row { display:flex; gap:10px; align-items:stretch; }
+    .row input, .row select { flex:1; min-width: 0; }
+
+    .flex-settings-page select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--fs-border-strong);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--fs-input-bg);
+      color: var(--fs-text);
+    }
+    .flex-settings-page select:focus {
+      outline: none;
+      border-color: var(--fs-accent);
+      box-shadow: 0 0 0 3px var(--fs-accent-soft);
+    }
+    select:disabled { opacity: .7; cursor: not-allowed; }
+
+    html body .flex-settings-page .form-group input {
+      border-radius: 8px;
+      background: var(--fs-input-bg);
+      border: 1px solid var(--fs-border-strong);
+      color: var(--fs-text);
+    }
+    html body .flex-settings-page .form-group input::placeholder {
+      color: var(--fs-muted);
+      opacity: 0.9;
+    }
+    html body .flex-settings-page .form-group input:focus {
+      outline: none;
+      border-color: var(--fs-accent);
+      box-shadow: 0 0 0 3px var(--fs-accent-soft);
+    }
+
+    .flex-settings-page .options-extra-desc {
+      color: var(--fs-muted);
+    }
+    .flex-settings-page label {
+      color: var(--fs-text);
+    }
+
+    body.options-theme-dark .flex-settings-page .panel-settings::-webkit-scrollbar {
+      width: 8px;
+    }
+    body.options-theme-dark .flex-settings-page .panel-settings::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.22);
+      border-radius: 4px;
+    }
+    @media (prefers-color-scheme: dark) {
+      body.options-theme-system .flex-settings-page .panel-settings::-webkit-scrollbar {
+        width: 8px;
+      }
+      body.options-theme-system .flex-settings-page .panel-settings::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.22);
+        border-radius: 4px;
+      }
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--fs-muted);
+      margin-top: 8px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .small.ok {
+      color: var(--fs-ok);
+      background: var(--fs-ok-bg);
+      border: 1px solid color-mix(in srgb, var(--fs-ok) 35%, transparent);
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+    .small.err {
+      color: var(--fs-danger);
+      background: var(--fs-danger-bg);
+      border: 1px solid color-mix(in srgb, var(--fs-danger) 35%, transparent);
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .chip {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius:999px;
+      border:1px solid var(--fs-border);
+      background: var(--fs-surface);
+      font-size:13px;
+      color: var(--fs-text);
+      max-width: 100%;
+    }
+    .chip button {
+      background: transparent;
+      border:none;
+      color: inherit;
+      padding: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor:pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .chip button:hover { background: var(--fs-surface-hover); }
+    .chip button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--fs-focus); }
+
+    .divider { border:none; border-top:1px solid #e0e0e0; margin: 18px 0; }
+    body.options-theme-dark .divider { border-top-color:#404040; }
+    @media (prefers-color-scheme: dark) { body.options-theme-system .divider { border-top-color:#404040; } }
+
+    .actions-row { justify-content: space-between; gap: 12px; }
+    .actions-row button { padding: 10px 14px; }
+    @media (max-width: 520px) {
+      .flex-header { flex-direction: column; align-items: stretch; }
+      .actions-row { flex-direction: column; }
+      .row { flex-direction: column; }
+      .pill-btn, .secondary-btn, .danger-btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap page-wrap--overflow flex-settings-page">
+    <div class="panel panel-settings flex-panel">
+      <div class="flex-header">
+        <h1>Гибкие настройки</h1>
+        <button type="button" class="pill-btn" id="backToOptions">← Настройки</button>
+      </div>
+
+      <div class="flex-settings-tabs" role="tablist" aria-label="Разделы гибких настроек">
+        <button type="button" class="flex-tab" role="tab" id="tab-black" aria-selected="true" aria-controls="panel-black">Чёрная рамка</button>
+        <button type="button" class="flex-tab" role="tab" id="tab-gdrive" aria-selected="false" aria-controls="panel-gdrive" tabindex="-1">Google Drive</button>
+      </div>
+
+      <div class="flex-tab-panels">
+        <div class="flex-tab-panel" id="panel-black" role="tabpanel" aria-labelledby="tab-black">
+          <p class="options-extra-desc">
+            Выберите метки Huntflow, при наличии которых у кандидата плавающее окно получает <b>чёрную рамку</b>.
+          </p>
+
+          <div class="form-group">
+            <label for="labelsSelect">Доступные метки (из Huntflow)</label>
+            <div class="row">
+              <select id="labelsSelect" disabled>
+                <option value="">— Загрузка меток… —</option>
+              </select>
+              <button type="button" id="addSelected" class="secondary-btn">Добавить</button>
+            </div>
+            <div class="small" id="labelsLoadStatus"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="labelInput">Добавить вручную</label>
+            <div class="row">
+              <input id="labelInput" type="text" placeholder="Например: Черный список / No come back" />
+              <button type="button" id="addLabel">Добавить</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Выбранные метки</label>
+            <div class="chips" id="labelsChips"></div>
+            <div class="small" id="saveStatus"></div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="row actions-row">
+            <button type="button" class="secondary-btn" id="useDefaults">Сбросить на значения по умолчанию</button>
+            <button type="button" class="danger-btn" id="clearAll">Очистить список</button>
+          </div>
+        </div>
+
+        <div class="flex-tab-panel" id="panel-gdrive" role="tabpanel" aria-labelledby="tab-gdrive" hidden>
+          <p class="options-extra-desc">
+            Выберите, на каких приложениях Google (Drive / Docs / Sheets / Slides / Forms) показывать плавающее окно.
+          </p>
+
+          <div class="form-group">
+            <label>Показывать окно на</label>
+            <div class="options-pages-row" id="gdrive-apps-row" aria-label="Типы приложений Google Drive"></div>
+            <div class="small" id="gdriveAppsStatus"></div>
+          </div>
+
+          <div class="row actions-row">
+            <button type="button" class="secondary-btn" id="gdriveAppsEnableAll">Включить всё</button>
+            <button type="button" class="secondary-btn" id="gdriveAppsDisableAll">Выключить всё</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="shared/constants.js"></script>
+  <script src="shared/utils/token.js"></script>
+  <script src="flexible-settings.js"></script>
+</body>
+</html>
+

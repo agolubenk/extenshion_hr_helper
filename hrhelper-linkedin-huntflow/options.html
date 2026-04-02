@@ -86,54 +86,12 @@
           </div>
         </div>
 
-        <div class="options-collapsible" id="section-pages">
-          <button type="button" class="options-collapsible-header" aria-expanded="true" aria-controls="section-pages-body">
-            <span class="options-collapsible-title">Активные страницы</span>
-            <span class="options-collapsible-icon">▼</span>
-          </button>
-          <div class="options-collapsible-body" id="section-pages-body">
-            <p class="options-extra-desc">Включить расширение на платформах:</p>
-            <div class="options-pages-row" id="options-pages-row">
-              <button type="button" class="options-page-btn options-page-on" data-page="linkedin" aria-pressed="true">
-                <img class="options-page-icon" src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=32" alt="" />
-                LinkedIn
-              </button>
-              <button type="button" class="options-page-btn options-page-on" data-page="hh_ecosystem" aria-pressed="true">
-                <img class="options-page-icon" src="https://www.google.com/s2/favicons?domain=hh.ru&sz=32" alt="" />
-                HH экосистема
-              </button>
-              <button type="button" class="options-page-btn options-page-on" data-page="huntflow" aria-pressed="true">
-                <img class="options-page-icon" src="https://www.google.com/s2/favicons?domain=huntflow.ru&sz=32" alt="" />
-                Huntflow
-              </button>
-              <button type="button" class="options-page-btn options-page-on" data-page="meet" aria-pressed="true">
-                <img class="options-page-icon" src="https://www.google.com/s2/favicons?domain=meet.google.com&sz=32" alt="" />
-                Google Meet
-              </button>
-              <button type="button" class="options-page-btn options-page-on" data-page="calendar" aria-pressed="true">
-                <svg class="options-page-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#4285F4" stroke-width="2"/>
-                  <path d="M3 9h18" stroke="#4285F4" stroke-width="2"/>
-                  <path d="M9 4V2M15 4V2" stroke="#4285F4" stroke-width="2" stroke-linecap="round"/>
-                  <rect x="7" y="12" width="3" height="3" fill="#EA4335"/>
-                  <rect x="11" y="12" width="3" height="3" fill="#FBBC05"/>
-                  <rect x="7" y="16" width="3" height="3" fill="#34A853"/>
-                  <rect x="11" y="16" width="3" height="3" fill="#4285F4"/>
-                </svg>
-                Google Calendar
-              </button>
-              <button type="button" class="options-page-btn options-page-on" data-page="gdrive" aria-pressed="true">
-                <svg class="options-page-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M8.5 2L2 12l3.5 6h13L22 12 15.5 2h-7z" fill="#FFC107"/>
-                  <path d="M15.5 2L22 12l-3.5 6H8.5" fill="#4CAF50"/>
-                  <path d="M2 12l6.5 6h9.5" fill="#2196F3"/>
-                  <path d="M8.5 2h7L12 8.5 8.5 2z" fill="#EA4335"/>
-                </svg>
-                Google Drive
-              </button>
-            </div>
-          </div>
-        </div>
+        <p class="options-extra-desc" style="margin-top: 12px;">
+          Включение платформ (LinkedIn, HH, Huntflow, Meet, Calendar, Drive) — в разделе
+          <strong>«Гибкие настройки»</strong>, вкладка «Активные страницы».
+        </p>
+
+        <button type="button" id="openFlexibleSettings" style="width:100%; margin-top: 12px;">Гибкие настройки</button>
       </section>
     </div>
 
@@ -144,6 +102,26 @@
       </div>
       <div class="changelog-scroll">
       <ul class="changelog-list">
+        <li class="changelog-item">
+          <div class="changelog-version">2.0.1.0 <span class="changelog-date">(02.04.2026)</span></div>
+          <ul class="changelog-ul">
+            <li><strong>Google Calendar</strong>: рядом со ссылкой на Huntflow в событии показывается метка статуса кандидата из Huntflow (данные API); на странице редактирования события, если в URL есть <code>eventedit</code>, метка не отображается. Реализовано в <code>content-calendar.js</code> (<code>processHuntflowStatusBadge</code>).</li>
+            <li><strong>Гибкие настройки</strong>: если во вкладке «Активные страницы» отключена платформа Google Drive, вкладка «Google Drive» становится недоступной; при открытой вкладке Drive и отключении платформы показ переключается на «Чёрная рамка»; навигация стрелками и клавишами Home/End пропускает отключённую вкладку.</li>
+            <li><strong>Huntflow</strong>: в <code>content-huntflow.js</code> добавлены безопасные обёртки для <code>chrome.storage</code> и <code>chrome.runtime</code>, чтобы после перезагрузки расширения без обновления вкладки реже возникала необработанная ошибка «Extension context invalidated».</li>
+          </ul>
+        </li>
+        <li class="changelog-item">
+          <div class="changelog-version">2.0.0.2 <span class="changelog-date">(02.04.2026)</span></div>
+          <ul class="changelog-ul">
+            <li><strong>Гибкие настройки</strong>: страница <code>flexible-settings.html</code> — вкладки «Чёрная рамка», «Активные страницы» и «Google Drive»; контент по центру по горизонтали; улучшены стили кнопок, полей, чипов меток и статусов.</li>
+            <li><strong>Активные страницы</strong>: переключатели платформ перенесены с основной страницы настроек на гибкие настройки; ключ <code>hrhelper_active_pages</code> без изменений.</li>
+            <li><strong>Гибкие настройки</strong>: доработана тёмная тема и режим «Системная» — карточка панели, сегментированные вкладки с акцентом, единые токены для полей и <code>select</code>, <code>color-scheme</code>, скроллбар панели в WebKit.</li>
+            <li><strong>Google Drive</strong>: в гибких настройках можно включать и отключать плавающее окно отдельно для Drive, Документов, Таблиц, Презентаций, Форм и прочих страниц в зоне действия скрипта; настройки хранятся в <code>chrome.storage.sync</code> (<code>hrhelper_gdrive_floating_apps</code>).</li>
+            <li><strong>Google Drive</strong>: контент-скрипт учитывает эти флаги при каждом запуске виджета и при изменении настроек; исправлено определение типа приложения для URL с префиксом аккаунта (<code>/u/0/spreadsheets/d/...</code> и аналогично для Docs/Slides).</li>
+            <li><strong>Google Drive</strong>: устранена ситуация, когда переключатели не применялись на уже открытой вкладке — скрипт больше не завершается до регистрации <code>storage.onChanged</code>; нормализация булевых значений из хранилища; зафиксирован ключ настроек строковым литералом.</li>
+            <li><strong>Manifest</strong>: для Google Forms добавлен матч <code>*://docs.google.com/forms/*</code> к контент-скрипту Drive.</li>
+          </ul>
+        </li>
         <li class="changelog-item">
           <div class="changelog-version">2.0.0.1 <span class="changelog-date">(02.04.2026)</span></div>
           <ul class="changelog-ul">

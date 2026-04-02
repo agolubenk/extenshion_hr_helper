@@ -3,18 +3,15 @@ if (!HRH) {
   throw new Error("[HRHelper] shared/constants.js not loaded");
 }
 const OPTIONS_THEME_KEY = HRH.OPTIONS_THEME_KEY;
-const ACTIVE_PAGES_KEY = HRH.ACTIVE_PAGES_KEY;
-const DEFAULT_ACTIVE_PAGES = HRH.DEFAULT_ACTIVE_PAGES;
-if (!OPTIONS_THEME_KEY || !ACTIVE_PAGES_KEY || !DEFAULT_ACTIVE_PAGES) {
-  throw new Error("[HRHelper] shared/constants.js not loaded (options/active keys missing)");
+if (!OPTIONS_THEME_KEY) {
+  throw new Error("[HRHelper] shared/constants.js not loaded (options keys missing)");
 }
 
 async function loadOptions() {
-  const { baseUrl, apiToken, [OPTIONS_THEME_KEY]: theme, [ACTIVE_PAGES_KEY]: activePages } = await chrome.storage.sync.get({
+  const { baseUrl, apiToken, [OPTIONS_THEME_KEY]: theme } = await chrome.storage.sync.get({
     baseUrl: "https://hr.sftntx.com/",
     apiToken: "",
     [OPTIONS_THEME_KEY]: "system",
-    [ACTIVE_PAGES_KEY]: DEFAULT_ACTIVE_PAGES,
   });
   document.getElementById("baseUrl").value = baseUrl;
   document.getElementById("apiToken").value = apiToken;
@@ -24,14 +21,6 @@ async function loadOptions() {
   const radio = document.querySelector(`input[name="optionsTheme"][value="${themeValue}"]`);
   if (radio) radio.checked = true;
   applyTheme(themeValue);
-  const pages = { ...DEFAULT_ACTIVE_PAGES, ...(activePages || {}) };
-  document.querySelectorAll(".options-page-btn[data-page]").forEach((btn) => {
-    const key = btn.getAttribute("data-page");
-    const on = !!pages[key];
-    btn.classList.toggle("options-page-on", on);
-    btn.classList.toggle("options-page-off", !on);
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-  });
   updateConnectionStatus(baseUrl, apiToken);
 }
 
@@ -112,12 +101,7 @@ async function saveOptions() {
 
   const themeRadio = document.querySelector('input[name="optionsTheme"]:checked');
   const theme = themeRadio ? themeRadio.value : "system";
-  const activePages = { ...DEFAULT_ACTIVE_PAGES };
-  document.querySelectorAll(".options-page-btn[data-page]").forEach((btn) => {
-    const key = btn.getAttribute("data-page");
-    if (key) activePages[key] = btn.classList.contains("options-page-on");
-  });
-  await chrome.storage.sync.set({ baseUrl, apiToken, [OPTIONS_THEME_KEY]: theme, [ACTIVE_PAGES_KEY]: activePages });
+  await chrome.storage.sync.set({ baseUrl, apiToken, [OPTIONS_THEME_KEY]: theme });
   applyTheme(theme);
   status.textContent = "Сохранено.";
   status.className = "hint ok";
@@ -131,26 +115,17 @@ function applyTheme(theme) {
 }
 
 document.getElementById("save").addEventListener("click", saveOptions);
+document.getElementById("openFlexibleSettings")?.addEventListener("click", () => {
+  try {
+    location.href = "flexible-settings.html";
+  } catch (_) {}
+});
 document.querySelectorAll('input[name="optionsTheme"]').forEach((el) => {
   el.addEventListener("change", () => {
     const theme = document.querySelector('input[name="optionsTheme"]:checked')?.value || "system";
     chrome.storage.sync.set({ [OPTIONS_THEME_KEY]: theme });
     applyTheme(theme);
   });
-});
-document.getElementById("options-pages-row")?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".options-page-btn[data-page]");
-  if (!btn) return;
-  const on = btn.classList.contains("options-page-on");
-  btn.classList.toggle("options-page-on", !on);
-  btn.classList.toggle("options-page-off", on);
-  btn.setAttribute("aria-pressed", !on ? "true" : "false");
-  const activePages = { ...DEFAULT_ACTIVE_PAGES };
-  document.querySelectorAll(".options-page-btn[data-page]").forEach((b) => {
-    const key = b.getAttribute("data-page");
-    if (key) activePages[key] = b.classList.contains("options-page-on");
-  });
-  chrome.storage.sync.set({ [ACTIVE_PAGES_KEY]: activePages });
 });
 loadOptions();
 

@@ -27,7 +27,7 @@
       "world": "MAIN"
    }, {
       "js": [ "js/linkedin-floating-button.js" ],
-      "matches": [ "*://www.linkedin.com/in/*", "*://linkedin.com/in/*" ],
+      "matches": [ "*://*/*" ],
       "run_at": "document_idle"
    } ],
    "content_security_policy": {
@@ -51,7 +51,7 @@
    "permissions": [ "scripting", "activeTab", "storage", "downloads", "cookies", "tabs", "debugger" ],
    "short_name": "__MSG_shortName__",
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "5.11.4",
+   "version": "5.11.44",
    "web_accessible_resources": [ {
       "matches": [ "*://*/*" ],
       "resources": [ "css/*", "img/*", "fonts/*", "icons/*", "popup/*" ]

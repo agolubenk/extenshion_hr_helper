@@ -1,9 +1,10 @@
 /**
- * Huntflow HR Helper — Floating Button for LinkedIn Profile Pages
+ * Huntflow HR Helper — Floating Button
  *
- * Adds a permanently visible floating button in the top-left corner of LinkedIn
- * profile pages (linkedin.com/in/*). On click it triggers the same candidate
- * creation / open-in-Huntflow logic that the main extension already uses.
+ * Adds a permanently visible floating button on supported sites (LinkedIn,
+ * Huntflow, hh.ru, rabota.by, etc.). On LinkedIn profile pages it triggers
+ * candidate creation / open-in-Huntflow logic; on other supported sites
+ * it opens the extension popup.
  *
  * Communication with the background service worker uses the standard
  * { type: "HRHELPER_API", payload } message format via chrome.runtime.sendMessage.
@@ -11,14 +12,97 @@
 (function () {
   "use strict";
 
-  /* ── Guards ────────────────────────────────────────────────────────── */
-  const IS_PROFILE_PAGE =
-    location.href.includes("/in/") && !location.href.includes("/search/");
-  if (!IS_PROFILE_PAGE) return;
-
   const BUTTON_ID = "hrhelper-linkedin-quick-btn";
   const POPUP_OVERLAY_ID = "hrhelper-linkedin-popup-overlay";
   const STORAGE_POS_KEY = "hrhelper_quick_btn_pos";
+  /** Отступ кнопки от краёв окна при ограничении позиции */
+  const VIEWPORT_MARGIN = 4;
+
+  /** Ограничивает координаты левого верхнего угла так, чтобы элемент целиком помещался во viewport. */
+  function clampFloatingCoords(left, top, el) {
+    var w = el.offsetWidth || 48;
+    var h = el.offsetHeight || 48;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var minL = Math.min(VIEWPORT_MARGIN, Math.max(0, vw - w));
+    var maxL = Math.max(minL, vw - w - VIEWPORT_MARGIN);
+    var minT = Math.min(VIEWPORT_MARGIN, Math.max(0, vh - h));
+    var maxT = Math.max(minT, vh - h - VIEWPORT_MARGIN);
+    return {
+      left: Math.min(Math.max(left, minL), maxL),
+      top: Math.min(Math.max(top, minT), maxT)
+    };
+  }
+
+  /**
+   * Сдвигает fixed-элемент так, чтобы он полностью оставался в видимой области окна.
+   * @returns {boolean} true, если позиция была изменена
+   */
+  function clampFloatingButtonToViewport(el) {
+    if (!el || !el.isConnected) return false;
+    var rect = el.getBoundingClientRect();
+    var next = clampFloatingCoords(rect.left, rect.top, el);
+    if (Math.abs(next.left - rect.left) < 0.5 && Math.abs(next.top - rect.top) < 0.5) return false;
+    el.style.left = next.left + "px";
+    el.style.top = next.top + "px";
+    return true;
+  }
+
+  function persistFloatingButtonPosition(el) {
+    if (!el) return;
+    try {
+      var r = el.getBoundingClientRect();
+      localStorage.setItem(STORAGE_POS_KEY, JSON.stringify({
+        top: r.top,
+        left: r.left
+      }));
+    } catch (_) {}
+  }
+
+  var clampResizeTimer = null;
+  var viewportClampListenersAttached = false;
+
+  function scheduleClampFloatingButtonOnResize() {
+    if (clampResizeTimer) clearTimeout(clampResizeTimer);
+    clampResizeTimer = setTimeout(function () {
+      clampResizeTimer = null;
+      var el = document.getElementById(BUTTON_ID);
+      if (!el) return;
+      if (clampFloatingButtonToViewport(el)) persistFloatingButtonPosition(el);
+    }, 100);
+  }
+
+  function ensureViewportClampListeners() {
+    if (viewportClampListenersAttached) return;
+    viewportClampListenersAttached = true;
+    window.addEventListener("resize", scheduleClampFloatingButtonOnResize);
+    try {
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", scheduleClampFloatingButtonOnResize);
+      }
+    } catch (_) {}
+  }
+
+  /** Сайты, на которых показывается плавающая кнопка (LinkedIn, Huntflow, hh.ru, rabota.by и т.д.) */
+  function isSupportedSite() {
+    try {
+      var host = location.hostname.toLowerCase();
+      if (host === "www.linkedin.com" || host === "linkedin.com") return true;
+      if (host === "huntflow.ru" || host.endsWith(".huntflow.ru") ||
+          host.endsWith(".huntflow.dev") || host.endsWith(".huntflow.ai") ||
+          host.endsWith(".huntflow.kz") || host.endsWith(".huntflow.uz")) return true;
+      if (host === "hh.ru" || host.endsWith(".hh.ru")) return true;
+      if (host === "rabota.by" || host.endsWith(".rabota.by")) return true;
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /** Страница профиля LinkedIn (для полной логики: статус, открытие в Huntflow) */
+  function isLinkedInProfilePage() {
+    return location.href.includes("/in/") && !location.href.includes("/search/");
+  }
 
   /* ── Helpers ───────────────────────────────────────────────────────── */
   function isExtensionContextValid() {
@@ -150,6 +234,10 @@
     shadow.appendChild(dot);
 
     document.body.appendChild(shadow);
+    if (clampFloatingButtonToViewport(shadow)) {
+      persistFloatingButtonPosition(shadow);
+    }
+    ensureViewportClampListeners();
     updateDot();
   }
 
@@ -158,6 +246,11 @@
     if (!wrapper) return;
     var dot = wrapper.querySelector(".hrhelper-quick-dot");
     if (!dot) return;
+    if (!isLinkedInProfilePage()) {
+      dot.style.display = "none";
+      return;
+    }
+    dot.style.display = "";
     var colors = { idle: "#999", loading: "#f0ad4e", linked: "#28a745", error: "#dc3545" };
     dot.style.background = colors[state.status] || "#999";
   }
@@ -181,15 +274,17 @@
     panel.style.height = h + "px";
   }
 
+  /** Удаляет оверлей с попапом из DOM — при следующем открытии iframe загрузится заново. */
+  function removeFloatingPopupOverlay() {
+    var overlay = document.getElementById(POPUP_OVERLAY_ID);
+    if (overlay) overlay.remove();
+  }
+
   function showPopupInTab() {
     var overlay = document.getElementById(POPUP_OVERLAY_ID);
     if (overlay) {
-      var wasHidden = overlay.style.display === "none";
-      overlay.style.display = wasHidden ? "block" : "none";
-      if (wasHidden) {
-        var panel = overlay.querySelector("div[data-hrhelper-panel]");
-        if (panel) positionPanelUnderButton(panel);
-      }
+      // Окно уже открыто — повторное нажатие по плавающей кнопке закрывает и сбрасывает
+      removeFloatingPopupOverlay();
       return;
     }
     overlay = document.createElement("div");
@@ -215,14 +310,14 @@
       "border-radius:50%!important;font:24px/1 sans-serif!important;cursor:pointer!important;" +
       "color:#333!important;display:flex!important;align-items:center!important;justify-content:center!important;";
     closeBtn.addEventListener("click", function () {
-      overlay.style.display = "none";
+      removeFloatingPopupOverlay();
     });
     overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) overlay.style.display = "none";
+      if (e.target === overlay) removeFloatingPopupOverlay();
     });
     var iframe = document.createElement("iframe");
     try {
-      iframe.src = chrome.runtime.getURL("popup/popup.html");
+      iframe.src = chrome.runtime.getURL("popup/popup.html?embed=1");
     } catch (_) {}
     iframe.style.cssText =
       "width:100%!important;height:100%!important;border:none!important;display:block!important;";
@@ -242,8 +337,9 @@
       wasDragged = false;
       startX = e.clientX;
       startY = e.clientY;
-      origX = el.offsetLeft;
-      origY = el.offsetTop;
+      var r = el.getBoundingClientRect();
+      origX = r.left;
+      origY = r.top;
       e.preventDefault();
     });
 
@@ -252,21 +348,17 @@
       var dx = e.clientX - startX;
       var dy = e.clientY - startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasDragged = true;
-      el.style.left = (origX + dx) + "px";
-      el.style.top = (origY + dy) + "px";
+      var next = clampFloatingCoords(origX + dx, origY + dy, el);
+      el.style.left = next.left + "px";
+      el.style.top = next.top + "px";
     });
 
     document.addEventListener("mouseup", function () {
       if (!dragging) return;
       dragging = false;
       if (wasDragged) {
-        // Save position
-        try {
-          localStorage.setItem(STORAGE_POS_KEY, JSON.stringify({
-            top: el.offsetTop,
-            left: el.offsetLeft
-          }));
-        } catch (_) {}
+        clampFloatingButtonToViewport(el);
+        persistFloatingButtonPosition(el);
       }
     });
 
@@ -283,6 +375,12 @@
   /* ── Core logic ────────────────────────────────────────────────────── */
   async function onQuickButtonClick() {
     if (state.busy) return;
+
+    // На всех поддерживаемых сайтах, кроме профиля LinkedIn, просто открываем попап
+    if (!isLinkedInProfilePage()) {
+      showPopupInTab();
+      return;
+    }
 
     // If already linked, open the Huntflow URL directly
     if (state.status === "linked" && state.huntflowUrl) {
@@ -421,62 +519,106 @@
   var lastUrl = location.href;
 
   function onUrlChange() {
-    var nowProfile = location.href.includes("/in/") && !location.href.includes("/search/");
     var wrapper = document.getElementById(BUTTON_ID);
 
-    if (!nowProfile) {
-      // Hide button on non-profile pages
+    if (!isSupportedSite()) {
       if (wrapper) wrapper.style.display = "none";
       return;
     }
 
-    // Show button
+    // Показываем кнопку на всех поддерживаемых сайтах
     if (wrapper) {
       wrapper.style.display = "";
     } else {
       createButton();
     }
 
-    // If URL actually changed, re-check status
-    var newNorm = normalizeLinkedInProfileUrl(location.href);
-    var oldNorm = state.profileUrl;
-    if (newNorm !== oldNorm) {
-      state.profileUrl = newNorm;
+    // На LinkedIn профиле — проверка статуса кандидата
+    if (isLinkedInProfilePage()) {
+      var newNorm = normalizeLinkedInProfileUrl(location.href);
+      var oldNorm = state.profileUrl;
+      if (newNorm !== oldNorm) {
+        state.profileUrl = newNorm;
+        state.huntflowUrl = null;
+        state.saved = false;
+        state.status = "idle";
+        state.busy = false;
+        updateDot();
+        checkInitialStatus();
+      }
+    } else {
+      state.profileUrl = null;
       state.huntflowUrl = null;
       state.saved = false;
       state.status = "idle";
-      state.busy = false;
       updateDot();
-      checkInitialStatus();
     }
   }
 
-  // Observe SPA navigation (LinkedIn is an SPA)
-  var observer = new MutationObserver(function () {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      onUrlChange();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Observe SPA navigation without a DOM-wide MutationObserver (LinkedIn mutates DOM constantly).
+  // We hook into History API + popstate and schedule a single URL check per tick.
+  (function setupSpaUrlTracking() {
+    var scheduled = false;
 
-  // Also listen for popstate / pushState
-  window.addEventListener("popstate", function () {
-    setTimeout(function () {
+    function scheduleCheck() {
+      if (scheduled) return;
+      scheduled = true;
+      setTimeout(function () {
+        scheduled = false;
+        if (location.href !== lastUrl) {
+          lastUrl = location.href;
+          onUrlChange();
+        }
+      }, 0);
+    }
+
+    try {
+      var _pushState = history.pushState;
+      var _replaceState = history.replaceState;
+      if (!_pushState.__hrhelper_patched__) {
+        history.pushState = function () {
+          var res = _pushState.apply(this, arguments);
+          scheduleCheck();
+          return res;
+        };
+        history.pushState.__hrhelper_patched__ = true;
+      }
+      if (!_replaceState.__hrhelper_patched__) {
+        history.replaceState = function () {
+          var res = _replaceState.apply(this, arguments);
+          scheduleCheck();
+          return res;
+        };
+        history.replaceState.__hrhelper_patched__ = true;
+      }
+    } catch (_) {
+      // ignore
+    }
+
+    window.addEventListener("popstate", scheduleCheck);
+    window.addEventListener("hashchange", scheduleCheck);
+
+    // Fallback: some SPA transitions may bypass patched functions in edge cases.
+    // Keep it light to avoid jank.
+    setInterval(function () {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
         onUrlChange();
       }
-    }, 100);
-  });
+    }, 1000);
+  })();
 
   /* ── Bootstrap ─────────────────────────────────────────────────────── */
   function init() {
-    // Don't duplicate
+    if (!isSupportedSite()) return;
     if (document.getElementById(BUTTON_ID)) return;
 
     createButton();
-    checkInitialStatus();
+    if (isLinkedInProfilePage()) {
+      checkInitialStatus();
+    } else {
+      updateDot();
+    }
   }
 
   if (document.readyState === "loading") {

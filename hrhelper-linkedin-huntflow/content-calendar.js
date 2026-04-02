@@ -193,6 +193,10 @@
           if (dark) btn.classList.add("hrhelper-cal-theme-dark");
           else btn.classList.remove("hrhelper-cal-theme-dark");
         });
+        document.querySelectorAll(".hrhelper-cal-hf-status").forEach((el) => {
+          if (dark) el.classList.add("hrhelper-cal-hf-status-dark");
+          else el.classList.remove("hrhelper-cal-hf-status-dark");
+        });
       });
     }
 
@@ -314,6 +318,129 @@
       }
     }
 
+    function ensureCalendarStatusBadgeStyles() {
+      if (document.getElementById("hrhelper-calendar-hf-status-styles")) return;
+      const style = document.createElement("style");
+      style.id = "hrhelper-calendar-hf-status-styles";
+      style.textContent = `
+        .hrhelper-cal-hf-status {
+          display: inline-flex !important;
+          align-items: center !important;
+          margin-left: 8px !important;
+          padding: 3px 10px !important;
+          border-radius: 999px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          line-height: 1.25 !important;
+          max-width: min(280px, 42vw) !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          vertical-align: middle !important;
+          border: 1px solid rgba(10, 102, 194, 0.3) !important;
+          background: rgba(10, 102, 194, 0.1) !important;
+          color: #0a66c2 !important;
+          box-sizing: border-box !important;
+        }
+        .hrhelper-cal-hf-status.hrhelper-cal-hf-status-dark {
+          border-color: rgba(100, 181, 246, 0.45) !important;
+          background: rgba(100, 181, 246, 0.14) !important;
+          color: #90caf9 !important;
+        }
+      `;
+      (document.head || document.documentElement).appendChild(style);
+    }
+
+    function findFirstHuntflowLinkInPage() {
+      const allLinks = Array.from(document.querySelectorAll("a"));
+      return allLinks.find((a) => {
+        const href = (a.href || "").toLowerCase();
+        const text = (a.textContent || "").toLowerCase();
+        return href.includes("huntflow.ru") || href.includes("huntflow.dev") || text.includes("huntflow.ru") || text.includes("huntflow.dev");
+      });
+    }
+
+    function pickDefaultVacancyItemForCalendar(items, defaultVacancyId) {
+      if (!items || !items.length) return null;
+      if (defaultVacancyId != null) {
+        const found = items.find((i) => i && i.vacancy_id === defaultVacancyId);
+        if (found) return found;
+      }
+      const active = items.filter((i) => i && !i.is_hired && !i.is_archived && i.status_type !== "rejected");
+      return active[0] || items[0];
+    }
+
+    function processHuntflowStatusBadge() {
+      if (!isExtensionContextValid()) return;
+
+      const pageUrl = location.href || "";
+      if (pageUrl.toLowerCase().includes("eventedit")) {
+        document.querySelectorAll(".hrhelper-cal-hf-status").forEach((el) => el.remove());
+        return;
+      }
+
+      const huntflowLink = findFirstHuntflowLinkInPage();
+      if (!huntflowLink) {
+        document.querySelectorAll(".hrhelper-cal-hf-status").forEach((el) => el.remove());
+        return;
+      }
+
+      const hfUrl = huntflowLink.href;
+      const cacheKey = pageUrl.split("#")[0] + "|" + hfUrl;
+      const next = huntflowLink.nextElementSibling;
+      if (next && next.classList && next.classList.contains("hrhelper-cal-hf-status") && next.dataset.hrHfCacheKey === cacheKey) {
+        applyCalendarButtonTheme();
+        return;
+      }
+      if (next && next.classList && next.classList.contains("hrhelper-cal-hf-status")) next.remove();
+
+      const fetchMulti = HRH.fetchStatusMulti;
+      if (!fetchMulti) return;
+
+      ensureCalendarStatusBadgeStyles();
+
+      fetchMulti({ huntflowUrl: hfUrl })
+        .then((data) => {
+          if (!data || data.error) return;
+          const items = data.items || [];
+          if (!items.length) return;
+
+          const linkNow = findFirstHuntflowLinkInPage();
+          if (!linkNow || linkNow.href !== hfUrl) return;
+
+          const nextEl = linkNow.nextElementSibling;
+          if (nextEl && nextEl.classList && nextEl.classList.contains("hrhelper-cal-hf-status") && nextEl.dataset.hrHfCacheKey === cacheKey) {
+            applyCalendarButtonTheme();
+            return;
+          }
+          if (nextEl && nextEl.classList && nextEl.classList.contains("hrhelper-cal-hf-status")) nextEl.remove();
+
+          const item = pickDefaultVacancyItemForCalendar(items, data.default_vacancy_id);
+          const statusText =
+            item && item.status_name != null && String(item.status_name).trim() ? String(item.status_name).trim() : "—";
+          const vacancyName = item && item.vacancy_name ? String(item.vacancy_name).trim() : "";
+
+          const badge = document.createElement("span");
+          badge.className = "hrhelper-cal-hf-status";
+          badge.dataset.hrHfCacheKey = cacheKey;
+          badge.textContent = statusText;
+          badge.setAttribute("role", "status");
+          badge.title = vacancyName ? vacancyName + ": " + statusText : "Статус в Huntflow: " + statusText;
+
+          linkNow.insertAdjacentElement("afterend", badge);
+          applyCalendarButtonTheme();
+          startCalendarThemeObserver();
+        })
+        .catch((e) => {
+          if (e?.message && !String(e.message).includes("Extension context invalidated")) logError("processHuntflowStatusBadge:", e);
+        });
+    }
+
+    function runCalendarEnhancements() {
+      processInterviewerLinks();
+      processHuntflowStatusBadge();
+    }
+
     function processInterviewerLinks() {
       ensureCalendarButtonStyles();
 
@@ -332,12 +459,7 @@
       if (existing) return;
 
       // Пытаемся найти ссылку Huntflow в событии (если есть — настраиваем кнопку по API)
-      const allLinks = Array.from(document.querySelectorAll("a"));
-      const huntflowLink = allLinks.find((a) => {
-        const href = (a.href || "").toLowerCase();
-        const text = (a.textContent || "").toLowerCase();
-        return href.includes("huntflow.ru") || href.includes("huntflow.dev") || text.includes("huntflow.ru") || text.includes("huntflow.dev");
-      });
+      const huntflowLink = findFirstHuntflowLinkInPage();
 
       const button = buildCalendarContactButtonPlaceholder();
       if (!button) return;
@@ -387,13 +509,13 @@
       startCalendarThemeObserver();
     }
 
-    setTimeout(() => processInterviewerLinks(), 1000);
-    processInterviewerLinks();
+    setTimeout(() => runCalendarEnhancements(), 1000);
+    runCalendarEnhancements();
 
     let processTimeout = null;
     const observer = new MutationObserver(() => {
       if (processTimeout) clearTimeout(processTimeout);
-      processTimeout = setTimeout(() => processInterviewerLinks(), 500);
+      processTimeout = setTimeout(() => runCalendarEnhancements(), 500);
     });
     if (document.body) observer.observe(document.body, { childList: true, subtree: true });
   }

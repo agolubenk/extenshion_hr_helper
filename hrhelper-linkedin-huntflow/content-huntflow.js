@@ -573,9 +573,72 @@
   const DEFAULT_HUNTFLOW_FLOATING_UI_STATE = { widgetCollapsed: false };
   let huntflowFloatingUIState = { ...DEFAULT_HUNTFLOW_FLOATING_UI_STATE };
 
+  /** После перезагрузки/обновления расширения контент-скрипт остаётся на странице без доступа к chrome.* */
+  function isExtensionContextValid() {
+    try {
+      return !!(chrome.runtime && chrome.runtime.id);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function storageSyncGetSafe(defaults, onData) {
+    try {
+      if (!isExtensionContextValid()) {
+        onData(defaults);
+        return;
+      }
+      chrome.storage.sync.get(defaults, function (data) {
+        if (chrome.runtime.lastError) {
+          onData(defaults);
+          return;
+        }
+        onData(data || defaults);
+      });
+    } catch (_) {
+      onData(defaults);
+    }
+  }
+
+  function storageLocalGetSafe(defaults, onData) {
+    try {
+      if (!isExtensionContextValid()) {
+        onData(defaults);
+        return;
+      }
+      chrome.storage.local.get(defaults, function (data) {
+        if (chrome.runtime.lastError) {
+          onData(defaults);
+          return;
+        }
+        onData(data || defaults);
+      });
+    } catch (_) {
+      onData(defaults);
+    }
+  }
+
+  function storageLocalSetSafe(obj, done) {
+    try {
+      if (!isExtensionContextValid()) {
+        if (done) done(false);
+        return;
+      }
+      chrome.storage.local.set(obj, function () {
+        if (chrome.runtime.lastError) {
+          if (done) done(false);
+          return;
+        }
+        if (done) done(true);
+      });
+    } catch (_) {
+      if (done) done(false);
+    }
+  }
+
   function getResolvedHuntflowTheme() {
     return new Promise(function (resolve) {
-      chrome.storage.sync.get({ [OPTIONS_THEME_KEY]: DEFAULT_THEME }, function (data) {
+      storageSyncGetSafe({ [OPTIONS_THEME_KEY]: DEFAULT_THEME }, function (data) {
         var t = (data[OPTIONS_THEME_KEY] || DEFAULT_THEME).toLowerCase();
         if (t === "light" || t === "dark") return resolve(t);
         var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -636,7 +699,7 @@
 
   function loadHuntflowFloatingUIState() {
     return new Promise((resolve) => {
-      chrome.storage.local.get({ [HUNTFLOW_FLOATING_UI_STATE_KEY]: DEFAULT_HUNTFLOW_FLOATING_UI_STATE }, (data) => {
+      storageLocalGetSafe({ [HUNTFLOW_FLOATING_UI_STATE_KEY]: DEFAULT_HUNTFLOW_FLOATING_UI_STATE }, (data) => {
         const s = data[HUNTFLOW_FLOATING_UI_STATE_KEY] || {};
         huntflowFloatingUIState = { ...DEFAULT_HUNTFLOW_FLOATING_UI_STATE, ...s };
         resolve();
@@ -648,7 +711,7 @@
     if (updates && typeof updates === "object") {
       huntflowFloatingUIState = { ...huntflowFloatingUIState, ...updates };
     }
-    chrome.storage.local.set({ [HUNTFLOW_FLOATING_UI_STATE_KEY]: { ...huntflowFloatingUIState } });
+    storageLocalSetSafe({ [HUNTFLOW_FLOATING_UI_STATE_KEY]: { ...huntflowFloatingUIState } });
   }
 
   function makeHuntflowWidgetDraggable(wrapper) {
@@ -752,7 +815,11 @@
     title.className = "hrhelper-hf-title";
     title.style.cssText = "font-size:14px;font-weight:600;color:var(--hrhelper-hf-accent,#0a66c2);display:flex;align-items:center;gap:6px;";
     const titleIcon = document.createElement("img");
-    titleIcon.src = chrome.runtime.getURL("icons/icon-32.png");
+    try {
+      titleIcon.src = chrome.runtime.getURL("icons/icon-32.png");
+    } catch (_) {
+      titleIcon.removeAttribute("src");
+    }
     titleIcon.alt = "";
     titleIcon.width = 20;
     titleIcon.height = 20;
@@ -801,6 +868,7 @@
 
     try {
       chrome.storage.onChanged.addListener(function (changes, areaName) {
+        if (!isExtensionContextValid()) return;
         if (areaName === "sync" && changes[OPTIONS_THEME_KEY]) applyHuntflowFloatingTheme(wrapper);
       });
     } catch (_) {}
@@ -1024,7 +1092,7 @@
     }
 
     const hidden = await new Promise((resolve) => {
-      chrome.storage.local.get({ [HUNTFLOW_FLOATING_HIDDEN_KEY]: false }, (data) => {
+      storageLocalGetSafe({ [HUNTFLOW_FLOATING_HIDDEN_KEY]: false }, (data) => {
         resolve(!!data[HUNTFLOW_FLOATING_HIDDEN_KEY]);
       });
     });
@@ -1122,21 +1190,29 @@
   }
 
   function init() {
-    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-      if (msg && msg.action === "setHuntflowFloatingVisible") {
-        const visible = msg.visible === true;
-        chrome.storage.local.set({ [HUNTFLOW_FLOATING_HIDDEN_KEY]: !visible }, () => {
-          const widget = document.querySelector(`[${ATTR_FLOATING}="1"]`);
-          if (widget) {
-            widget.style.display = visible ? "" : "none";
-          } else if (visible) {
-            injectButtons();
-          }
-          sendResponse({ success: true });
-        });
-        return true;
-      }
-    });
+    try {
+      chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+        if (msg && msg.action === "setHuntflowFloatingVisible") {
+          const visible = msg.visible === true;
+          storageLocalSetSafe({ [HUNTFLOW_FLOATING_HIDDEN_KEY]: !visible }, (ok) => {
+            if (!ok) {
+              sendResponse({ success: false });
+              return;
+            }
+            const widget = document.querySelector(`[${ATTR_FLOATING}="1"]`);
+            if (widget) {
+              widget.style.display = visible ? "" : "none";
+            } else if (visible) {
+              injectButtons();
+            }
+            sendResponse({ success: true });
+          });
+          return true;
+        }
+      });
+    } catch (_) {
+      /* расширение перезагружено — страницу нужно обновить вручную */
+    }
 
     if (!isApplicantPage()) {
       document.querySelectorAll(`[${ATTR}="1"]`).forEach((el) => el.remove());

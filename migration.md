@@ -795,6 +795,8 @@ const MESSAGES = {
     'vacancy_apply':             'Взять на вакансию',
     'button.view':               'Смотреть',
     'button.check':              'Проверить',
+    'button.copy_link':          'Копировать ссылку',
+    'button.copied':             'Скопировано',
     'button.signin':             'Войти',
     'button.save_without_adding':'Сохранить без добавления',
     'button.close':              'Закрыть',
@@ -839,6 +841,8 @@ const MESSAGES = {
     'vacancy_apply':             'Add to vacancy',
     'button.view':               'View',
     'button.check':              'Check',
+    'button.copy_link':          'Copy link',
+    'button.copied':             'Copied',
     'button.signin':             'Sign in',
     'button.save_without_adding':'Save without adding',
     'button.close':              'Close',
@@ -1271,6 +1275,34 @@ function renderSaveForm() {
     linkBtn.textContent = data.double ? t('button.check') : t('button.view');
     linkBtn.addEventListener('click', handleClose);
     footer.appendChild(linkBtn);
+
+    const copyLinkBtn = el('button', 'hf-btn hf-btn--black');
+    copyLinkBtn.type = 'button';
+    copyLinkBtn.setAttribute('data-qa', 'copy_applicant_link');
+    copyLinkBtn.title = t('button.copy_link');
+    copyLinkBtn.innerHTML = '📋';
+    copyLinkBtn.addEventListener('click', () => {
+      function highlight() {
+        copyLinkBtn.style.backgroundColor = '#28a745';
+        copyLinkBtn.style.color = '#fff';
+        setTimeout(() => {
+          copyLinkBtn.style.backgroundColor = '';
+          copyLinkBtn.style.color = '';
+        }, 500);
+      }
+      navigator.clipboard.writeText(vacancyLink).then(highlight).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = vacancyLink;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          highlight();
+        } catch (e) {}
+        ta.remove();
+      });
+    });
+    footer.appendChild(copyLinkBtn);
   }
 
   const btnClose = el('button', 'hf-btn hf-btn--white');

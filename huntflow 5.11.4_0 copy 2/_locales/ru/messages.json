@@ -1,0 +1,17 @@
+{
+   "actionTitle": {
+      "message": "Сохранить кандидата"
+   },
+   "alreadyAdded": {
+      "message": "Уже на вакансии"
+   },
+   "extensionDescription": {
+      "message": "Профессиональный сервис для автоматизации рекрутинга"
+   },
+   "extensionName": {
+      "message": "Волшебная кнопка Хантфлоу"
+   },
+   "shortName": {
+      "message": "Волшебная кнопка"
+   }
+}
